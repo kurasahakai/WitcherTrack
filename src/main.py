@@ -83,7 +83,7 @@ if __name__ == '__main__':
         type = get_close_matches(text[:30], types_of_entities) #find if the text matches one of the entity tipes
 
         if type:
-            most_similar_list = get_close_matches(text, all_data[type[0]]) #take the most similar item
+            most_similar_list = get_close_matches(text[-30:], all_data[type[0]]) #take the most similar item
 
             if most_similar_list: #if the most similar item exists
                 to_track = most_similar_list[0]  #the first item is the correct one
