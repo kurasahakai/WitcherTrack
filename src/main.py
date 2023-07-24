@@ -80,7 +80,7 @@ if __name__ == '__main__':
         text = re.sub(" +", " ",re.sub("\n", " ", text)).lower() #remove multi spaces and newlines
         print(text)
 
-        type = get_close_matches(text[:25], types_of_entities) #find if the text matches one of the entity tipes
+        type = get_close_matches(text[:30], types_of_entities) #find if the text matches one of the entity tipes
 
         if type:
             most_similar_list = get_close_matches(text, all_data[type[0]]) #take the most similar item
@@ -115,7 +115,7 @@ if __name__ == '__main__':
                         crafting_dict[to_track] = "FOUND" #change status to found
                         to_track = type[0] + ": " + to_track
                         with open("..\\output\\crafting_total.txt", "w") as f:
-                            f.write("{}/178\n{}%".format(crafting_counter, round(crafting_counter/370, 2))) #overlay txt file
+                            f.write("{}/411\n{}%".format(crafting_counter, round(crafting_counter/411, 2))) #overlay txt file
                         print("found:", to_track)
 
                 #logging
