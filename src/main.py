@@ -64,7 +64,7 @@ if __name__ == '__main__':
     while True:
         pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe' #Initializing tesseract
 
-        pic = pyscreenshot.grab(bbox=(50, 500, 663, 820)) #Take a screenshot
+        pic = pyscreenshot.grab(bbox=(50, 500, 850, 850)) #Take a screenshot
 
         gray_pic = cv2.cvtColor(np.array(pic), cv2.COLOR_BGR2GRAY) #Turn it BnW
 
