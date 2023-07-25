@@ -2,10 +2,12 @@ use std::{
     ffi::{CStr, CString},
     fs,
     path::Path,
+    ptr::null_mut,
+    slice,
 };
 
-use anyhow::{anyhow, Result};
-use leptonica_sys::pixRead;
+use anyhow::Result;
+use leptonica_sys::{lept_free, pixDestroy, pixWriteMemPng, Pix};
 use tesseract_sys::{
     TessBaseAPI, TessBaseAPICreate, TessBaseAPIDelete, TessBaseAPIGetUTF8Text, TessBaseAPIInit3,
     TessBaseAPISetImage2, TessDeleteText,
@@ -18,6 +20,46 @@ const ENG_TRAINEDDATA_URL: &str =
     "https://github.com/tesseract-ocr/tessdata/raw/main/eng.traineddata";
 
 const TRAINEDDATA_PATH: &str = "./eng.traineddata";
+
+// RAII picture
+pub struct Picture {
+    pix: *mut Pix,
+}
+
+impl Picture {
+    pub fn pix(&self) -> *mut Pix {
+        self.pix
+    }
+
+    pub fn is_null(&self) -> bool {
+        self.pix.is_null()
+    }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        let mut data: Vec<u8> = Vec::new();
+        let mut ptr: *mut u8 = null_mut();
+        let mut size = 0usize;
+        unsafe { pixWriteMemPng(&mut ptr, &mut size, self.pix, 0.0) };
+        data.extend(unsafe { slice::from_raw_parts(ptr, size) });
+        unsafe { lept_free(ptr as *mut _) };
+
+        data
+    }
+}
+
+impl From<*mut Pix> for Picture {
+    fn from(pix: *mut Pix) -> Self {
+        Self { pix }
+    }
+}
+
+impl Drop for Picture {
+    fn drop(&mut self) {
+        unsafe {
+            pixDestroy(&mut self.pix);
+        }
+    }
+}
 
 /// Download english Tesseract trained data if it is not present.
 pub fn download_trained_data() -> Result<()> {
@@ -54,15 +96,8 @@ impl OcrReader {
     }
 
     /// Load an image from a
-    pub fn get_ocr(&self, image_path: &Path) -> Result<String> {
-        let image_path = CString::new(
-            image_path
-                .to_str()
-                .ok_or_else(|| anyhow!("Could not convert path to string: {image_path:?}"))?,
-        )?;
-        let image = unsafe { pixRead(image_path.as_ptr()) };
-
-        unsafe { TessBaseAPISetImage2(self.handle, image) };
+    pub fn get_ocr(&self, image: &Picture) -> Result<String> {
+        unsafe { TessBaseAPISetImage2(self.handle, image.pix()) };
 
         let text = unsafe { TessBaseAPIGetUTF8Text(self.handle) };
         let text_str = unsafe { CStr::from_ptr(text) }.to_string_lossy().into_owned();
@@ -76,5 +111,27 @@ impl OcrReader {
 impl Drop for OcrReader {
     fn drop(&mut self) {
         unsafe { TessBaseAPIDelete(self.handle) };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{thread, time::Duration};
+
+    use super::*;
+
+    #[test]
+    fn test_ocr() {
+        download_trained_data().unwrap();
+        let ocr_reader = OcrReader::new().unwrap();
+        loop {
+            let screenshot =
+                screenshot::capture_screenshot().and_then(screenshot::gray_and_threshold).unwrap();
+
+            let ocr = ocr_reader.get_ocr(&screenshot);
+            println!("---\n{ocr:?}\n\n");
+
+            thread::sleep(Duration::from_millis(1000));
+        }
     }
 }

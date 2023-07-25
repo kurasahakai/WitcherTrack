@@ -3,8 +3,9 @@ use std::ptr::null_mut;
 
 use anyhow::{anyhow, Result};
 use leptonica_sys::{
-    lept_free, pixConvertRGBToGray, pixDestroy, pixReadMem, pixThresholdToBinary, pixWriteMemPng,
-    Pix,
+    boxDestroy, boxaDestroy, boxaGetBox, boxaGetCount, lept_free, pixConnCompPixa,
+    pixConvertRGBToGray, pixDestroy, pixGetHeight, pixGetWidth, pixReadMem, pixThresholdToBinary,
+    pixWriteMemPng, pixaGetCount, pixaGetPix, Pix, L_CLONE,
 };
 use screenshots::Screen;
 use windows::{
@@ -15,41 +16,7 @@ use windows::{
     },
 };
 
-// RAII picture
-pub struct Picture {
-    pix: *mut Pix,
-}
-
-impl Picture {
-    fn is_null(&self) -> bool {
-        self.pix.is_null()
-    }
-
-    fn to_vec(&self) -> Vec<u8> {
-        let mut data: Vec<u8> = Vec::new();
-        let mut ptr: *mut u8 = null_mut();
-        let mut size = 0usize;
-        unsafe { pixWriteMemPng(&mut ptr, &mut size, self.pix, 0.0) };
-        data.extend(unsafe { slice::from_raw_parts(ptr, size) });
-        unsafe { lept_free(ptr as *mut _) };
-
-        data
-    }
-}
-
-impl From<*mut Pix> for Picture {
-    fn from(pix: *mut Pix) -> Self {
-        Self { pix }
-    }
-}
-
-impl Drop for Picture {
-    fn drop(&mut self) {
-        unsafe {
-            pixDestroy(&mut self.pix);
-        }
-    }
-}
+use crate::Picture;
 
 pub fn capture_screenshot() -> Result<Picture> {
     let (left, top, wnd_width, wnd_height) = unsafe { get_witcher_rect() };
