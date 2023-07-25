@@ -29,12 +29,10 @@ unsafe fn get_witcher_rect() -> (i32, i32, u32, u32) {
     let mut rect = RECT::default();
 
     GetClientRect(hwnd, &mut rect);
-    println!("{rect:?}");
 
     let (left, top) = (rect.left, rect.top);
 
     GetWindowRect(hwnd, &mut rect);
-    println!("{rect:?}");
 
     let (left, top) = (rect.left + left, rect.top + top);
     let (width, height) = (rect.right - rect.left, rect.bottom - rect.top);
@@ -46,7 +44,7 @@ unsafe fn get_witcher_rect() -> (i32, i32, u32, u32) {
 mod tests {
     use std::fs;
 
-    use crate::gray_and_threshold;
+    use crate::preprocess;
 
     use super::capture;
 
@@ -54,7 +52,7 @@ mod tests {
     fn test_screenshot() {
         let screenshot = capture().unwrap();
         fs::write("foo.png", screenshot.to_vec()).unwrap();
-        let thresh = gray_and_threshold(screenshot).unwrap();
+        let thresh = unsafe { preprocess(screenshot) }.unwrap();
         fs::write("bar.png", thresh.to_vec()).unwrap();
     }
 }

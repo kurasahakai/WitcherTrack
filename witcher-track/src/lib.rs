@@ -5,7 +5,10 @@ use std::{fs, slice};
 
 use anyhow::{anyhow, Result};
 use leptonica_sys::{
-    lept_free, pixConvertRGBToGray, pixDestroy, pixThresholdToBinary, pixWriteMemPng, Pix,
+    boxDestroy, boxaGetBox, boxaGetBoxGeometry, boxaGetCount, lept_free, pixColorFill,
+    pixConnCompPixa, pixConvertRGBToGray, pixCopy, pixCountPixels, pixCreate, pixDestroy,
+    pixDilateBrick, pixErodeBrick, pixGetDepth, pixGetHeight, pixGetWidth, pixInvert, pixOr,
+    pixThresholdToBinary, pixWriteMemPng, pixaGetCount, pixaGetPix, Pix, L_CLONE, PIXA,
 };
 use tesseract_sys::{
     TessBaseAPI, TessBaseAPICreate, TessBaseAPIDelete, TessBaseAPIGetUTF8Text, TessBaseAPIInit3,
@@ -35,22 +38,50 @@ pub fn download_trained_data() -> Result<()> {
 }
 
 // Process picture to obtain something that's easy to extract OCR from.
-pub fn gray_and_threshold(picture: Picture) -> Result<Picture> {
+pub unsafe fn preprocess(picture: Picture) -> Result<Picture> {
     // Convert to grayscale.
-    let grayscale = Picture::from(unsafe { pixConvertRGBToGray(picture.pix, 0.0, 0.0, 0.0) });
+    let grayscale = Picture::from(pixConvertRGBToGray(picture.pix, 0.0, 0.0, 0.0));
     if grayscale.is_null() {
         return Err(anyhow!("Could not convert picture to grayscale"));
     }
 
     // Threshold the picture.
-    let threshold = Picture::from(unsafe { pixThresholdToBinary(grayscale.pix, 140) });
+    let threshold = Picture::from(pixThresholdToBinary(grayscale.pix, 180));
     if threshold.is_null() {
         return Err(anyhow!("Could not threshold picture"));
     }
-
-    //
-
+    pixInvert(threshold.pix, threshold.pix);
+    pixDilateBrick(threshold.pix, threshold.pix, 2, 2);
+    pixErodeBrick(threshold.pix, threshold.pix, 1, 1);
     Ok(threshold)
+
+    // let mut cca: *mut PIXA = null_mut();
+    // let cca_boxa = pixConnCompPixa(threshold.pix, &mut cca, 8);
+    // if cca_boxa.is_null() {
+    //     return Err(anyhow!("Could not run connected component analysis"));
+    // }
+    // let filtered = pixCreate(
+    //     pixGetWidth(threshold.pix),
+    //     pixGetHeight(threshold.pix),
+    //     pixGetDepth(threshold.pix),
+    // );
+    //
+    // let n = pixaGetCount(cca);
+    // for i in 0..n {
+    //     let mut w = 0;
+    //     let mut h = 0;
+    //     boxaGetBoxGeometry(cca_boxa, i, null_mut(), null_mut(), &mut w, &mut h);
+    //     let total_area = w * h;
+    //
+    //     println!("area {total_area}");
+    //     if total_area > 100 {
+    //         let mut pix = pixaGetPix(cca, i, L_CLONE);
+    //         pixOr(filtered, filtered, pix);
+    //         pixDestroy(&mut pix);
+    //     }
+    // }
+    //
+    // Ok(Picture::from(filtered))
 }
 
 // RAII picture
@@ -134,6 +165,7 @@ impl Drop for OcrReader {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
     use std::thread;
     use std::time::Duration;
 
@@ -144,12 +176,14 @@ mod tests {
         download_trained_data().unwrap();
         let ocr_reader = OcrReader::new().unwrap();
         loop {
-            let screenshot = screenshot::capture().and_then(gray_and_threshold).unwrap();
+            let screenshot =
+                screenshot::capture().and_then(|pic| unsafe { preprocess(pic) }).unwrap();
 
             let ocr = ocr_reader.get_ocr(&screenshot);
             println!("---\n{ocr:?}\n\n");
+            fs::write("foo.png", screenshot.to_vec()).unwrap();
 
-            thread::sleep(Duration::from_millis(1000));
+            thread::sleep(Duration::from_millis(2000));
         }
     }
 }
