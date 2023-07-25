@@ -1,20 +1,9 @@
-use core::slice;
-use std::ptr::null_mut;
-
 use anyhow::{anyhow, Result};
-use leptonica_sys::{
-    boxDestroy, boxaDestroy, boxaGetBox, boxaGetCount, lept_free, pixConnCompPixa,
-    pixConvertRGBToGray, pixDestroy, pixGetHeight, pixGetWidth, pixReadMem, pixThresholdToBinary,
-    pixWriteMemPng, pixaGetCount, pixaGetPix, Pix, L_CLONE,
-};
+use leptonica_sys::{pixConvertRGBToGray, pixReadMem, pixThresholdToBinary};
 use screenshots::Screen;
-use windows::{
-    w,
-    Win32::{
-        Foundation::RECT,
-        UI::WindowsAndMessaging::{FindWindowW, GetClientRect, GetWindowRect},
-    },
-};
+use windows::w;
+use windows::Win32::Foundation::RECT;
+use windows::Win32::UI::WindowsAndMessaging::{FindWindowW, GetClientRect, GetWindowRect};
 
 use crate::Picture;
 

@@ -1,10 +1,7 @@
-use std::{
-    ffi::{CStr, CString},
-    fs,
-    path::Path,
-    ptr::null_mut,
-    slice,
-};
+use std::ffi::{CStr, CString};
+use std::path::Path;
+use std::ptr::null_mut;
+use std::{fs, slice};
 
 use anyhow::Result;
 use leptonica_sys::{lept_free, pixDestroy, pixWriteMemPng, Pix};
@@ -116,7 +113,8 @@ impl Drop for OcrReader {
 
 #[cfg(test)]
 mod tests {
-    use std::{thread, time::Duration};
+    use std::thread;
+    use std::time::Duration;
 
     use super::*;
 
