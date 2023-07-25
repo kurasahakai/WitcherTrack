@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use leptonica_sys::{pixConvertRGBToGray, pixReadMem, pixThresholdToBinary};
+use leptonica_sys::pixReadMem;
 use screenshots::Screen;
 use windows::w;
 use windows::Win32::Foundation::RECT;
@@ -7,7 +7,7 @@ use windows::Win32::UI::WindowsAndMessaging::{FindWindowW, GetClientRect, GetWin
 
 use crate::Picture;
 
-pub fn capture_screenshot() -> Result<Picture> {
+pub fn capture() -> Result<Picture> {
     let (left, top, wnd_width, wnd_height) = unsafe { get_witcher_rect() };
 
     // Calculate the crop height as 50% of the window height.
@@ -46,11 +46,13 @@ unsafe fn get_witcher_rect() -> (i32, i32, u32, u32) {
 mod tests {
     use std::fs;
 
-    use super::{capture_screenshot, gray_and_threshold};
+    use crate::gray_and_threshold;
+
+    use super::capture;
 
     #[test]
     fn test_screenshot() {
-        let screenshot = capture_screenshot().unwrap();
+        let screenshot = capture().unwrap();
         fs::write("foo.png", screenshot.to_vec()).unwrap();
         let thresh = gray_and_threshold(screenshot).unwrap();
         fs::write("bar.png", thresh.to_vec()).unwrap();

@@ -12,8 +12,8 @@ use tesseract_sys::{
     TessBaseAPISetImage2, TessDeleteText,
 };
 
-mod data;
-mod screenshot;
+pub mod data;
+pub mod screenshot;
 
 const ENG_TRAINEDDATA_URL: &str =
     "https://github.com/tesseract-ocr/tessdata/raw/main/eng.traineddata";
@@ -144,8 +144,7 @@ mod tests {
         download_trained_data().unwrap();
         let ocr_reader = OcrReader::new().unwrap();
         loop {
-            let screenshot =
-                screenshot::capture_screenshot().and_then(screenshot::gray_and_threshold).unwrap();
+            let screenshot = screenshot::capture().and_then(gray_and_threshold).unwrap();
 
             let ocr = ocr_reader.get_ocr(&screenshot);
             println!("---\n{ocr:?}\n\n");
