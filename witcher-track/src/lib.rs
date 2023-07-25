@@ -3,8 +3,10 @@ use std::path::Path;
 use std::ptr::null_mut;
 use std::{fs, slice};
 
-use anyhow::Result;
-use leptonica_sys::{lept_free, pixDestroy, pixWriteMemPng, Pix};
+use anyhow::{anyhow, Result};
+use leptonica_sys::{
+    lept_free, pixConvertRGBToGray, pixDestroy, pixThresholdToBinary, pixWriteMemPng, Pix,
+};
 use tesseract_sys::{
     TessBaseAPI, TessBaseAPICreate, TessBaseAPIDelete, TessBaseAPIGetUTF8Text, TessBaseAPIInit3,
     TessBaseAPISetImage2, TessDeleteText,
@@ -17,6 +19,39 @@ const ENG_TRAINEDDATA_URL: &str =
     "https://github.com/tesseract-ocr/tessdata/raw/main/eng.traineddata";
 
 const TRAINEDDATA_PATH: &str = "./eng.traineddata";
+
+/// Download english Tesseract trained data if it is not present.
+pub fn download_trained_data() -> Result<()> {
+    if Path::new(TRAINEDDATA_PATH).exists() {
+        return Ok(());
+    }
+
+    let response = ureq::get(ENG_TRAINEDDATA_URL).call()?;
+    let mut bytes = Vec::with_capacity(response.header("Content-Length").unwrap().parse()?);
+    response.into_reader().read_to_end(&mut bytes)?;
+    fs::write(TRAINEDDATA_PATH, bytes)?;
+
+    Ok(())
+}
+
+// Process picture to obtain something that's easy to extract OCR from.
+pub fn gray_and_threshold(picture: Picture) -> Result<Picture> {
+    // Convert to grayscale.
+    let grayscale = Picture::from(unsafe { pixConvertRGBToGray(picture.pix, 0.0, 0.0, 0.0) });
+    if grayscale.is_null() {
+        return Err(anyhow!("Could not convert picture to grayscale"));
+    }
+
+    // Threshold the picture.
+    let threshold = Picture::from(unsafe { pixThresholdToBinary(grayscale.pix, 140) });
+    if threshold.is_null() {
+        return Err(anyhow!("Could not threshold picture"));
+    }
+
+    //
+
+    Ok(threshold)
+}
 
 // RAII picture
 pub struct Picture {
@@ -58,20 +93,6 @@ impl Drop for Picture {
     }
 }
 
-/// Download english Tesseract trained data if it is not present.
-pub fn download_trained_data() -> Result<()> {
-    if Path::new(TRAINEDDATA_PATH).exists() {
-        return Ok(());
-    }
-
-    let response = ureq::get(ENG_TRAINEDDATA_URL).call()?;
-    let mut bytes = Vec::with_capacity(response.header("Content-Length").unwrap().parse()?);
-    response.into_reader().read_to_end(&mut bytes)?;
-    fs::write(TRAINEDDATA_PATH, bytes)?;
-
-    Ok(())
-}
-
 /// RAII wrapper around Tesseract API
 pub struct OcrReader {
     handle: *mut TessBaseAPI,
@@ -92,7 +113,7 @@ impl OcrReader {
         Ok(Self { handle })
     }
 
-    /// Load an image from a
+    /// Run OCR on a picture.
     pub fn get_ocr(&self, image: &Picture) -> Result<String> {
         unsafe { TessBaseAPISetImage2(self.handle, image.pix()) };
 

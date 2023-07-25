@@ -23,20 +23,6 @@ pub fn capture_screenshot() -> Result<Picture> {
     Ok(Picture::from(unsafe { pixReadMem(image.as_ptr(), image.len()) }))
 }
 
-pub fn gray_and_threshold(picture: Picture) -> Result<Picture> {
-    let grayscale = Picture::from(unsafe { pixConvertRGBToGray(picture.pix, 0.0, 0.0, 0.0) });
-    if grayscale.is_null() {
-        return Err(anyhow!("Could not convert picture to grayscale"));
-    }
-
-    let threshold = Picture::from(unsafe { pixThresholdToBinary(grayscale.pix, 140) });
-    if threshold.is_null() {
-        return Err(anyhow!("Could not threshold picture"));
-    }
-
-    Ok(threshold)
-}
-
 unsafe fn get_witcher_rect() -> (i32, i32, u32, u32) {
     let title = w!("The Witcher 3");
     let hwnd = FindWindowW(None, title);
