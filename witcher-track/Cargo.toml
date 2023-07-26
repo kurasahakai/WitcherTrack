@@ -13,8 +13,10 @@ dependencies = ["leptonica", "tesseract"]
 
 [dependencies]
 anyhow = "1.0.72"
+itertools = "0.11.0"
 lazy_static = "1.4.0"
 leptonica-sys = "0.4.5"
+rusqlite = { version = "0.29.0", features = ["bundled-full"] }
 screenshots = "0.7.0"
 tesseract-sys = "0.6.0"
 ureq = "2.7.1"

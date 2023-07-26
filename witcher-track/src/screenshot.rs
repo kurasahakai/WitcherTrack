@@ -8,14 +8,14 @@ use windows::Win32::UI::WindowsAndMessaging::{FindWindowW, GetClientRect, GetWin
 use crate::Picture;
 
 pub fn capture() -> Result<Picture> {
-    let (left, top, wnd_width, wnd_height) = unsafe { get_witcher_rect() };
+    let (left, top, width, height) = unsafe { get_witcher_rect() };
 
     // Calculate the crop height as 50% of the window height.
-    let height = (wnd_height as f32 * 0.5) as u32;
+    // let height = (wnd_height as f32 * 0.5) as u32;
     // Calculate the top so that the cropped part is in the middle.
-    let top = top + (((wnd_height - height) as f32) * 0.5) as i32;
+    // let top = top + (((wnd_height - height) as f32) * 0.5) as i32;
     // Calculate the crop width as half of the window width.
-    let width = (wnd_width as f32 * 0.5) as u32;
+    // let width = (wnd_width as f32 * 0.5) as u32;
 
     let screen = Screen::all()?.into_iter().next().ok_or_else(|| anyhow!("No screen found"))?;
     let image = screen.capture_area(left, top, width, height)?.to_png(None)?;

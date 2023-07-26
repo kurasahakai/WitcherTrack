@@ -7,10 +7,11 @@ use std::{fs, slice};
 
 use anyhow::Result;
 use leptonica_sys::{
-    boxGetGeometry, boxaDestroy, boxaGetBox, boxaGetCount, kernelDestroy, lept_free,
-    makeGaussianKernel, pixConnCompBB, pixConvertRGBToGray, pixConvolveRGB, pixCreate, pixDestroy,
-    pixDilateBrick, pixGetDepth, pixGetHeight, pixGetWidth, pixInvert, pixRasterop, pixReadMem,
-    pixThresholdToBinary, pixWriteMemPng, Pix, L_CLONE, PIX_SRC,
+    boxCreate, boxDestroy, boxGetGeometry, boxaDestroy, boxaGetBox, boxaGetCount, kernelDestroy,
+    lept_free, makeGaussianKernel, pixClipRectangle, pixConnCompBB, pixConvertRGBToGray,
+    pixConvolveRGB, pixCreate, pixDestroy, pixDilateBrick, pixGetDepth, pixGetHeight, pixGetWidth,
+    pixInvert, pixRasterop, pixReadMem, pixThresholdToBinary, pixWriteMemPng, Pix, L_CLONE,
+    PIX_SRC,
 };
 use tesseract_sys::{
     TessBaseAPI, TessBaseAPICreate, TessBaseAPIDelete, TessBaseAPIGetUTF8Text, TessBaseAPIInit3,
@@ -108,6 +109,25 @@ impl Picture {
         unsafe { lept_free(ptr as *mut _) };
 
         data
+    }
+
+    /// Crop the center-leftmost part.
+    pub fn into_cropped(self, width_pct: f32, height_pct: f32) -> Self {
+        let pix = unsafe {
+            let width = pixGetWidth(self.pix) as f32;
+            let height = pixGetHeight(self.pix) as f32;
+
+            let new_y = height * (1. - height_pct) / 2.;
+            let new_width = width * width_pct;
+            let new_height = height * height_pct;
+
+            let mut boxx = boxCreate(0, new_y as i32, new_width as i32, new_height as i32);
+            let pix = pixClipRectangle(self.pix, boxx, null_mut());
+            boxDestroy(&mut boxx);
+            pix
+        };
+
+        Self::from(pix)
     }
 }
 
