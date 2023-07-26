@@ -24,8 +24,7 @@ lazy_static! {
 }
 
 pub fn text_preprocess<S: Into<String>>(s: S) -> String {
-    let s = s
-        .into()
+    s.into()
         .to_lowercase()
         .chars()
         .filter(|&char| match char {
@@ -33,8 +32,10 @@ pub fn text_preprocess<S: Into<String>>(s: S) -> String {
             ' ' => true,
             _ => false,
         })
-        .collect::<String>();
-    s.trim().to_string()
+        .collect::<String>()
+        .split_whitespace()
+        .intersperse(" ")
+        .collect::<String>()
 }
 
 #[test]

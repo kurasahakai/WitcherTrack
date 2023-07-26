@@ -1,3 +1,5 @@
+#![feature(iter_intersperse)]
+
 use std::ffi::{CStr, CString};
 use std::path::Path;
 use std::ptr::null_mut;
@@ -169,9 +171,8 @@ mod tests {
 
     use leptonica_sys::{boxCreate, boxDestroy, pixClipRectangle, pixWritePng};
 
-    use crate::data::text_preprocess;
-
     use super::*;
+    use crate::data::text_preprocess;
 
     const X: i32 = 336;
     const Y: i32 = 15;
