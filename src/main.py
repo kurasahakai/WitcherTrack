@@ -40,13 +40,21 @@ if __name__ == '__main__':
 
     #initial writing of the files - resets data on the files when running the script
     with open("..\\output\\quest_total.txt", "w") as f:
-        f.write("{}/388\n{}%".format(quest_counter, round(quest_counter / 388, 2)))
+        f.write("{}/388\n{}%".format(quest_counter, round(quest_counter / 388*100, 2)))
 
     with open("..\\output\\alchemy_total.txt", "w") as f:
-        f.write("{}/178\n{}%".format(alchemy_counter, round(alchemy_counter / 178, 2)))
+        f.write("{}/178\n{}%".format(alchemy_counter, round(alchemy_counter / 178*100, 2)))
 
     with open("..\\output\\crafting_total.txt", "w") as f:
-        f.write("{}/411\n{}%".format(crafting_counter, round(crafting_counter / 411, 2)))
+        f.write("{}/411\n{}%".format(crafting_counter, round(crafting_counter / 411*100, 2)))
+
+    with open("..\\output\\log.txt", "w") as log_file:
+        time = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-4]
+        log_file.write("{} - New run starting \n".format(time))
+
+    with open("..\\output\\log_completo.txt", "w") as log:
+        time = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-4]
+        log.write("{} - New run starting \n".format(time))
 
     #creating dictionaries to store the tracker status
     quests_dict = dict((quest, "NOT COMPLETED") for quest in quests)
@@ -80,14 +88,26 @@ if __name__ == '__main__':
         text = re.sub(" +", " ",re.sub("\n", " ", text)).lower() #remove multi spaces and newlines
         print(text)
 
-        type = get_close_matches(text[:30], types_of_entities) #find if the text matches one of the entity tipes
+        type = get_close_matches(text[:30], types_of_entities)  # find if the text matches one of the entity tipes
+
+        with open("..\\output\\log_completo.txt", "a") as log:
+            time = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-4]
+            log.write("{} - {}\n".format(time, text))
+            if type:
+                log.write(f"type of text:{type[0]}\n")
 
         if type:
-            most_similar_list = get_close_matches(text[-30:], all_data[type[0]]) #take the most similar item
-
+            if type[0] == "quest completed":
+                most_similar_list = get_close_matches(text[15:], all_data[type[0]]) #take the most similar item
+            else:
+                most_similar_list = get_close_matches(text, all_data[type[0]])  # take the most similar item
             if most_similar_list: #if the most similar item exists
                 to_track = most_similar_list[0]  #the first item is the correct one
                 print(to_track)
+
+                with open("..\\output\\log_completo.txt", "a") as log:
+                    time = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-4]
+                    log.write("list of similarities: {}\n".format(most_similar_list))
 
                 #actually tracking the completion
                 if type[0] == "quest completed":
@@ -96,8 +116,13 @@ if __name__ == '__main__':
                         quests_dict[to_track] = "COMPLETED" #change status to completed
                         to_track = type[0] + ": " + to_track
                         with open("..\\output\\quest_total.txt", "w") as f:
-                            f.write("{}/388\n{}%".format(quest_counter, round(quest_counter/388, 2))) #overlay txt file
+                            f.write("{}/388\n{}%".format(quest_counter, round(quest_counter/388*100, 2))) #overlay txt file
                         print("found:", to_track)
+                        # logging
+                        with open("..\\output\\log.txt", "a") as log_file:
+                            time = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-4]
+                            log_file.write("{} - {}\n".format(time, to_track))
+
 
 
                 elif type[0] == 'new alchemy formula':
@@ -106,8 +131,12 @@ if __name__ == '__main__':
                         alchemy_dict[to_track] = "FOUND" #change status to found
                         to_track = type[0] + ": " + to_track
                         with open("..\\output\\alchemy_total.txt", "w") as f:
-                            f.write("{}/178\n{}%".format(alchemy_counter, round(alchemy_counter/178, 2))) #overlay txt file
+                            f.write("{}/178\n{}%".format(alchemy_counter, round(alchemy_counter/178*100, 2))) #overlay txt file
                         print("found:", to_track)
+                        # logging
+                        with open("..\\output\\log.txt", "a") as log_file:
+                            time = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-4]
+                            log_file.write("{} - {}\n".format(time, to_track))
 
                 elif type[0] == "new crafting diagram":
                     if crafting_dict[to_track] == "NOT FOUND":
@@ -115,13 +144,14 @@ if __name__ == '__main__':
                         crafting_dict[to_track] = "FOUND" #change status to found
                         to_track = type[0] + ": " + to_track
                         with open("..\\output\\crafting_total.txt", "w") as f:
-                            f.write("{}/411\n{}%".format(crafting_counter, round(crafting_counter/411, 2))) #overlay txt file
+                            f.write("{}/411\n{}%".format(crafting_counter, round(crafting_counter/411*100, 2))) #overlay txt file
                         print("found:", to_track)
+                        # logging
+                        with open("..\\output\\log.txt", "a") as log_file:
+                            time = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-4]
+                            log_file.write("{} - {}\n".format(time, to_track))
 
-                #logging
-                with open("..\\output\\log.txt", "a") as log_file:
-                    time = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-4]
-                    log_file.write("{} -  {}\n".format(time, to_track))
+
 
         time = datetime.datetime.now()
         diff = time-timestamp
