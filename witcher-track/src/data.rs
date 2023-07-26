@@ -63,8 +63,8 @@ impl GameRun {
         conn.execute(
             r#"
             CREATE TABLE IF NOT EXISTS logs (
-                when TEXT,
-                message TEXT,
+                logtime TEXT,
+                message TEXT
             )
             "#,
             (),
@@ -115,7 +115,8 @@ impl GameRun {
     }
 
     pub fn log(&mut self, log: String) -> Result<()> {
-        self.conn.execute("INSERT INTO logs (when, message) VALUES (datetime(), ?)", [log])?;
+        tracing::info!("{log}");
+        self.conn.execute("INSERT INTO logs (logtime, message) VALUES (datetime(), ?)", [log])?;
         Ok(())
     }
 
