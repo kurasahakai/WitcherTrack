@@ -44,9 +44,8 @@ unsafe fn get_witcher_rect() -> (i32, i32, u32, u32) {
 mod tests {
     use std::fs;
 
-    use crate::preprocess;
-
     use super::capture;
+    use crate::preprocess;
 
     #[test]
     fn test_screenshot() {

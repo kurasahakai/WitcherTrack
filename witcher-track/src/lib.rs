@@ -3,17 +3,12 @@ use std::path::Path;
 use std::ptr::null_mut;
 use std::{fs, slice};
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use leptonica_sys::{
-    boxDestroy, boxGetGeometry, boxaDestroy, boxaGetBox, boxaGetBoxGeometry, boxaGetCount,
-    kernelDestroy, lept_free, makeGaussianKernel, pixAdaptThresholdToBinary,
-    pixAdaptThresholdToBinaryGen, pixColorFill, pixConnCompBB, pixConnCompPixa,
-    pixConvertRGBToGray, pixConvolveRGB, pixCopy, pixCountPixels, pixCreate, pixDestroy,
-    pixDilateBrick, pixDisplay, pixErodeBrick, pixGetDepth, pixGetHeight, pixGetRGBPixel,
-    pixGetWidth, pixInvert, pixMedianCutHisto, pixMedianCutQuant, pixMedianCutQuantGeneral, pixOr,
-    pixOtsuAdaptiveThreshold, pixOtsuThreshOnBackgroundNorm, pixRasterop, pixReadMem,
-    pixSauvolaBinarize, pixSetPixel, pixSmoothConnectedRegions, pixThresholdToBinary,
-    pixWriteMemPng, pixaGetCount, pixaGetPix, setLeptDebugOK, Pix, L_CLONE, PIXA, PIX_SRC,
+    boxGetGeometry, boxaDestroy, boxaGetBox, boxaGetCount, kernelDestroy, lept_free,
+    makeGaussianKernel, pixConnCompBB, pixConvertRGBToGray, pixConvolveRGB, pixCreate, pixDestroy,
+    pixDilateBrick, pixGetDepth, pixGetHeight, pixGetWidth, pixInvert, pixRasterop, pixReadMem,
+    pixThresholdToBinary, pixWriteMemPng, Pix, L_CLONE, PIX_SRC,
 };
 use tesseract_sys::{
     TessBaseAPI, TessBaseAPICreate, TessBaseAPIDelete, TessBaseAPIGetUTF8Text, TessBaseAPIInit3,
@@ -42,7 +37,11 @@ pub fn download_trained_data() -> Result<()> {
     Ok(())
 }
 
-// Process picture to obtain something that's easy to extract OCR from.
+/// Process picture to obtain something that's easy to extract OCR from.
+///
+/// # Safety
+///
+/// haha
 pub unsafe fn preprocess(picture: Picture) -> Result<Picture> {
     let mut kern = makeGaussianKernel(2, 2, 0.3, 1.0);
     let picture = Picture::from(pixConvolveRGB(picture.pix, kern));
@@ -178,15 +177,10 @@ pub fn text_preproc(s: String) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
-    use std::thread;
-    use std::time::Duration;
-    use std::time::Instant;
+    use std::time::{Duration, Instant};
+    use std::{fs, thread};
 
-    use leptonica_sys::boxCreate;
-    use leptonica_sys::pixClipRectangle;
-    use leptonica_sys::pixWriteJpeg;
-    use leptonica_sys::pixWritePng;
+    use leptonica_sys::{boxCreate, boxDestroy, pixClipRectangle, pixWritePng};
 
     use super::*;
 
