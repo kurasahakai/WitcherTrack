@@ -121,19 +121,19 @@ impl GameRun {
 
     pub fn flag_diagram(&mut self, diagram: &str) -> Result<()> {
         self.conn.execute("UPDATE diagrams SET found = 1 WHERE diagram = ?", [diagram])?;
-        self.log(format!("FOUND diagram {diagram}"));
+        self.log(format!("FOUND diagram {diagram}"))?;
         Ok(())
     }
 
     pub fn flag_formula(&mut self, formula: &str) -> Result<()> {
         self.conn.execute("UPDATE formulae SET found = 1 WHERE formula = ?", [formula])?;
-        self.log(format!("FOUND formula {formula}"));
+        self.log(format!("FOUND formula {formula}"))?;
         Ok(())
     }
 
     pub fn flag_quest(&mut self, quest: &str) -> Result<()> {
         self.conn.execute("UPDATE quests SET found = 1 WHERE quest = ?", [quest])?;
-        self.log(format!("FOUND quest {quest}"));
+        self.log(format!("FOUND quest {quest}"))?;
         Ok(())
     }
 }
