@@ -135,8 +135,8 @@ Message from an Old Friend
 Missing in Action 
 Monster Slayer
 Novigrad Hospitality
-Novigrad
-Novigrad
+Novigrad, Closed City
+Novigrad, Closed City II
 Now or Never 
 Of Dairy And Darkness
 Of Swords and Dumplings
@@ -344,7 +344,6 @@ Gwent: To Everything - Turn
 Knight for Hire
 Master Master Master Master!
 Mutual of Beauclair's Wild Kingdom
-No Place Like Home
 Of Sheers and a Witcher I Sing
 Paperchase
 Raging Wolf
@@ -360,7 +359,6 @@ Vintner's Contract: Cleaning Those Hard-to-Reach Places
 Vintner's Contract: Duchaton Crest
 Vintner's Contract: Dun Tynne Hillside
 Vintner's Contract: Rivecalme Storehouse
-Wine Wars: Belgaard
 Wine Wars: Belgaard
 Wine Wars: Consorting
 Wine Wars: Coronata

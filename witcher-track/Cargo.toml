@@ -13,6 +13,7 @@ dependencies = ["leptonica", "tesseract"]
 
 [dependencies]
 anyhow = "1.0.72"
+lazy_static = "1.4.0"
 leptonica-sys = "0.4.5"
 screenshots = "0.7.0"
 tesseract-sys = "0.6.0"

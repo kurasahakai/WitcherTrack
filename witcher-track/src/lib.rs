@@ -162,25 +162,14 @@ impl Drop for OcrReader {
     }
 }
 
-pub fn text_preproc(s: String) -> String {
-    let s = s
-        .to_lowercase()
-        .chars()
-        .filter(|&char| match char {
-            char if char.is_ascii_alphabetic() => true,
-            ' ' => true,
-            _ => false,
-        })
-        .collect::<String>();
-    s.trim().to_string()
-}
-
 #[cfg(test)]
 mod tests {
     use std::time::{Duration, Instant};
     use std::{fs, thread};
 
     use leptonica_sys::{boxCreate, boxDestroy, pixClipRectangle, pixWritePng};
+
+    use crate::data::text_preprocess;
 
     use super::*;
 
@@ -213,7 +202,7 @@ mod tests {
         let data = fs::read(path).unwrap();
         let pic = crop_pic(&data);
         let elapsed = start.elapsed();
-        println!("{path}: {:?} took {elapsed:?}", ocr_reader.get_ocr(&pic).map(text_preproc));
+        println!("{path}: {:?} took {elapsed:?}", ocr_reader.get_ocr(&pic).map(text_preprocess));
     }
 
     fn preprocess_fn<P: AsRef<Path>>(path: P) {
