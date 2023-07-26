@@ -1,0 +1,55 @@
+Copper Ingot
+Copper ore
+Copper plate
+Cupronickel ore
+Cured draconid leather
+Cured leather
+Dark iron ingot
+Dark iron plate
+Dark steel ingot
+Dark steel ingot 2
+Dark steel plate
+Dimeritium ingot
+Dimeritium ingot 2
+Dimeritium ore
+Dimeritium plate
+Enriched dimeritium ingot
+Enriched dimeritium ore
+Enriched dimeritium plate
+Glowing ore ingot
+Green gold ingot
+Green gold ore
+Green gold ore 2
+Green gold plate
+Hardened leather
+Hardened timber
+Infused crystal
+Infused dust
+Infused shard
+Infused slyzard hide
+Iron ingot
+Leather scraps
+Linen
+Meteorite ingot
+Meteorite silver ingot
+Meteorite silver plate
+Nickel ore
+Orichalcum ingot
+Orichalcum ore
+Orichalcum ore 2
+Orichalcum plate
+Resin
+Silk
+Silver ingot
+Silver ingot 2
+Silver ore
+Silver plate
+Steel ingot
+Steel ingot 2
+Steel plates
+String
+Thread
+Zerrikanian powder
+Haft
+Warrior's leather jacket
+

@@ -1,3 +1,5 @@
 /target
 eng.traineddata
 Cargo.lock
+run.mkv
+/tests/fixtures/prep-*
