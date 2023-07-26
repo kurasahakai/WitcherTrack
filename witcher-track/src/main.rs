@@ -15,9 +15,9 @@ fn run() -> Result<()> {
     tracing_subscriber::fmt().with_max_level(LevelFilter::INFO).init();
 
     loop {
-        let screenshot = screenshot::capture().and_then(|pic| unsafe { preprocess(pic) }).unwrap();
+        let screenshot = screenshot::capture().and_then(|pic| unsafe { preprocess(pic) })?;
         let ocr_text =
-            ocr_reader.get_ocr(&screenshot.into_cropped(0.4, 0.3)).map(text_preprocess)?;
+            ocr_reader.get_ocr(&screenshot.into_cropped(0.4, 0.3)?).map(text_preprocess)?;
         game_run.log(format!("Recognized: {ocr_text}"))?;
         match tokenize(ocr_text) {
             Some(Action::Quest(v)) => game_run.flag_quest(&v)?,
@@ -26,13 +26,13 @@ fn run() -> Result<()> {
             None => (),
         }
 
-        thread::sleep(Duration::from_millis(1000));
+        thread::sleep(Duration::from_millis(100));
     }
 }
 
 fn main() {
     if let Err(e) = run() {
-        eprintln!("{e:#?}");
+        eprintln!("Errored out: {e:#?}");
         let _ = std::io::stdin().read(&mut [0u8]).unwrap();
     }
 }

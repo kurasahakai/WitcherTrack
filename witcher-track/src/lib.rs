@@ -5,7 +5,7 @@ use std::path::Path;
 use std::ptr::null_mut;
 use std::{fs, slice};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use leptonica_sys::{
     boxCreate, boxDestroy, boxGetGeometry, boxaDestroy, boxaGetBox, boxaGetCount, kernelDestroy,
     lept_free, makeGaussianKernel, pixClipRectangle, pixConnCompBB, pixConvertRGBToGray,
@@ -112,10 +112,14 @@ impl Picture {
     }
 
     /// Crop the center-leftmost part.
-    pub fn into_cropped(self, width_pct: f32, height_pct: f32) -> Self {
+    pub fn into_cropped(self, width_pct: f32, height_pct: f32) -> Result<Self> {
         let pix = unsafe {
             let width = pixGetWidth(self.pix) as f32;
             let height = pixGetHeight(self.pix) as f32;
+
+            if width == 0. || height == 0. {
+                return Err(anyhow!("Width and height are {width} {height}, can't crop"));
+            }
 
             let new_y = height * (1. - height_pct) / 2.;
             let new_width = width * width_pct;
@@ -127,7 +131,7 @@ impl Picture {
             pix
         };
 
-        Self::from(pix)
+        Ok(Self::from(pix))
     }
 }
 
