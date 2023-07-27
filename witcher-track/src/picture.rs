@@ -149,6 +149,7 @@ mod tests {
     use std::path::Path;
 
     use super::*;
+    use crate::CROP_RANGE;
 
     fn preprocess_and_save<P: AsRef<Path>>(path: P) {
         let path = path.as_ref();
@@ -158,7 +159,8 @@ mod tests {
         let dest_path = CString::new(dest_path.to_str().unwrap()).unwrap();
 
         let data = fs::read(path).unwrap();
-        let pic = unsafe { preprocess(Picture::from_mem(data)).unwrap() };
+        let cropped = Picture::from_mem(data).into_cropped(CROP_RANGE.0, CROP_RANGE.1).unwrap();
+        let pic = unsafe { preprocess(cropped).unwrap() };
         unsafe { pixWritePng(dest_path.as_ptr(), pic.pix, 0.) };
     }
 

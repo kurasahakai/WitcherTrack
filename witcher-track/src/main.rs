@@ -7,7 +7,7 @@ use tracing::metadata::LevelFilter;
 use witcher_track::data::{parse_action, slugify, Action};
 use witcher_track::db::GameRun;
 use witcher_track::picture::preprocess;
-use witcher_track::{screenshot, OcrReader};
+use witcher_track::{screenshot, OcrReader, CROP_RANGE};
 
 fn run() -> Result<()> {
     let ocr_reader = OcrReader::new()?;
@@ -18,7 +18,8 @@ fn run() -> Result<()> {
     loop {
         let start = Instant::now();
         let screenshot = screenshot::capture().and_then(|pic| unsafe { preprocess(pic) })?;
-        let ocr_text = ocr_reader.get_ocr(&screenshot.into_cropped(0.4, 0.3)?).map(slugify)?;
+        let cropped = screenshot.into_cropped(CROP_RANGE.0, CROP_RANGE.1)?;
+        let ocr_text = ocr_reader.get_ocr(&cropped).map(slugify)?;
         if !ocr_text.trim().is_empty() {
             game_run.log("RECOGNIZED", &ocr_text)?;
         }
@@ -30,7 +31,7 @@ fn run() -> Result<()> {
         }
         game_run.timing(start.elapsed())?;
 
-        thread::sleep(Duration::from_millis(50));
+        thread::sleep(Duration::from_millis(100));
     }
 }
 

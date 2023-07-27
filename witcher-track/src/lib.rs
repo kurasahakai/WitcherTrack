@@ -15,6 +15,8 @@ pub mod screenshot;
 // Tesseract trained data.
 const TRAINED_DATA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/eng.traineddata"));
 
+pub const CROP_RANGE: (f32, f32) = (0.6, 0.3);
+
 /// RAII wrapper around Tesseract API
 pub struct OcrReader {
     handle: *mut TessBaseAPI,
@@ -33,13 +35,13 @@ impl OcrReader {
                 TRAINED_DATA.as_ptr() as *const i8,
                 TRAINED_DATA.len() as i32,
                 b"eng\0".as_ptr() as *const i8,
-                TessOcrEngineMode_OEM_DEFAULT,
+                TessOcrEngineMode_OEM_LSTM_ONLY,
                 null_mut(),
                 0,
                 null_mut(),
                 null_mut(),
                 0,
-                0,
+                1,
             )
         };
 
@@ -77,9 +79,25 @@ mod tests {
     fn run_ocr(ocr_reader: &OcrReader, path: &str) {
         let start = Instant::now();
         let data = fs::read(path).unwrap();
-        let pic = unsafe { preprocess(Picture::from_mem(data)).unwrap() };
+
+        let start_crop = Instant::now();
+        let pic = Picture::from_mem(data).into_cropped(CROP_RANGE.0, CROP_RANGE.1).unwrap();
+        let elapsed_crop = start_crop.elapsed();
+
+        let start_preprocess = Instant::now();
+        let pic = unsafe { preprocess(pic).unwrap() };
+        let elapsed_preprocess = start_preprocess.elapsed();
+
+        let start_ocr = Instant::now();
+        let res = ocr_reader.get_ocr(&pic).map(slugify);
+        let elapsed_ocr = start_ocr.elapsed();
+
         let elapsed = start.elapsed();
-        println!("{path}: {:?} took {elapsed:?}", ocr_reader.get_ocr(&pic).map(slugify));
+        println!("{path}: {res:?}, took:");
+        println!("  All         {elapsed:?}");
+        println!("  Crop        {elapsed_crop:?}");
+        println!("  Preprocess  {elapsed_preprocess:?}");
+        println!("  Ocr         {elapsed_ocr:?}");
     }
 
     #[test]
