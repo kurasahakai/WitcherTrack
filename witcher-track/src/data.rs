@@ -4,6 +4,7 @@ use std::time::Duration;
 use anyhow::Result;
 use lazy_static::lazy_static;
 use rusqlite::Connection;
+use strsim::normalized_damerau_levenshtein;
 
 lazy_static! {
     static ref DIAGRAMS: HashSet<String> =
@@ -157,11 +158,14 @@ pub enum Action {
 }
 
 pub fn tokenize<S: AsRef<str>>(s: S) -> Option<Action> {
+    const THRESHOLD: f64 = 0.6;
+
     fn quest_completed(s: &str) -> Option<Action> {
         let mut it = s.split_whitespace();
         it.find(|&s| s.contains("quest"))?;
         it.find(|&s| s.contains("completed"))?;
-        Some(Action::Quest(it.intersperse(" ").collect()))
+        get_closest_match(&it.intersperse(" ").collect::<String>(), &*QUESTS, THRESHOLD)
+            .map(Action::Quest)
     }
 
     fn new_alchemy_formula(s: &str) -> Option<Action> {
@@ -169,7 +173,8 @@ pub fn tokenize<S: AsRef<str>>(s: S) -> Option<Action> {
         it.find(|&s| s.contains("new"))?;
         it.find(|&s| s.contains("alchemy"))?;
         it.find(|&s| s.contains("formula"))?;
-        Some(Action::Formula(it.intersperse(" ").collect()))
+        get_closest_match(&it.intersperse(" ").collect::<String>(), &*FORMULAE, THRESHOLD)
+            .map(Action::Formula)
     }
 
     fn new_crafting_diagram(s: &str) -> Option<Action> {
@@ -177,7 +182,8 @@ pub fn tokenize<S: AsRef<str>>(s: S) -> Option<Action> {
         it.find(|&s| s.contains("new"))?;
         it.find(|&s| s.contains("crafting"))?;
         it.find(|&s| s.contains("diagram"))?;
-        Some(Action::Diagram(it.intersperse(" ").collect()))
+        get_closest_match(&it.intersperse(" ").collect::<String>(), &*DIAGRAMS, THRESHOLD)
+            .map(Action::Diagram)
     }
 
     if let Some(q) = quest_completed(s.as_ref()) {
@@ -208,6 +214,24 @@ pub fn slugify<S: Into<String>>(s: S) -> String {
         .split_whitespace()
         .intersperse(" ")
         .collect::<String>()
+}
+
+fn get_closest_match<'a, I>(word: &str, possibilities: I, cutoff: f64) -> Option<String>
+where
+    I: IntoIterator<Item = &'a String>,
+{
+    let mut matches_with_scores: Vec<(&String, f64)> = possibilities
+        .into_iter()
+        .map(|possibility| (possibility, normalized_damerau_levenshtein(word, possibility)))
+        .collect();
+
+    matches_with_scores.sort_by(|(_, score1), (_, score2)| score1.partial_cmp(score2).unwrap());
+
+    matches_with_scores
+        .into_iter()
+        .take_while(|(_, score)| *score >= cutoff)
+        .map(|(matched_word, _)| matched_word.to_string())
+        .next()
 }
 
 #[cfg(test)]
