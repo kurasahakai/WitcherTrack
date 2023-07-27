@@ -4,7 +4,8 @@ use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use tracing::metadata::LevelFilter;
-use witcher_track::data::{parse_action, slugify, Action, GameRun};
+use witcher_track::data::{parse_action, slugify, Action};
+use witcher_track::db::GameRun;
 use witcher_track::picture::preprocess;
 use witcher_track::{screenshot, OcrReader};
 

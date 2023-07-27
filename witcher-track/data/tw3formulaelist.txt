@@ -9,7 +9,7 @@ Formula: Vermilion
 Formula: Vitriol
 Manuscript page: Dwarven Spirit
 Manuscript page: White Gull
-Formula: Dancing Star
+Manuscript page: Dancing Star
 Formula: Devil's Puffball
 Formula: Dimeritium bomb
 Formula: Dragons Dream

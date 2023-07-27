@@ -8,6 +8,7 @@ use picture::Picture;
 use tesseract_sys::*;
 
 pub mod data;
+pub mod db;
 pub mod picture;
 pub mod screenshot;
 
