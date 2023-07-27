@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use tracing::metadata::LevelFilter;
-use witcher_track::data::{slugify, tokenize, Action, GameRun};
+use witcher_track::data::{parse_action, slugify, Action, GameRun};
 use witcher_track::{download_trained_data, preprocess, screenshot, OcrReader};
 
 fn run() -> Result<()> {
@@ -21,7 +21,7 @@ fn run() -> Result<()> {
         if !ocr_text.trim().is_empty() {
             game_run.log("RECOGNIZED", &ocr_text)?;
         }
-        match tokenize(ocr_text) {
+        match parse_action(ocr_text) {
             Some(Action::Quest(v)) => game_run.flag_quest(&v)?,
             Some(Action::Formula(v)) => game_run.flag_formula(&v)?,
             Some(Action::Diagram(v)) => game_run.flag_diagram(&v)?,

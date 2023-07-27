@@ -157,8 +157,8 @@ pub enum Action {
     Diagram(String),
 }
 
-pub fn tokenize<S: AsRef<str>>(s: S) -> Option<Action> {
-    const THRESHOLD: f64 = 0.6;
+pub fn parse_action<S: AsRef<str>>(s: S) -> Option<Action> {
+    const THRESHOLD: f64 = 0.5;
 
     fn quest_completed(s: &str) -> Option<Action> {
         let mut it = s.split_whitespace();
@@ -225,7 +225,7 @@ where
         .map(|possibility| (possibility, normalized_damerau_levenshtein(word, possibility)))
         .collect();
 
-    matches_with_scores.sort_by(|(_, score1), (_, score2)| score1.partial_cmp(score2).unwrap());
+    matches_with_scores.sort_by(|(_, score1), (_, score2)| score2.partial_cmp(score1).unwrap());
 
     matches_with_scores
         .into_iter()
@@ -261,19 +261,19 @@ mod tests {
     #[test]
     fn test_tokenize() {
         assert_eq!(
-            tokenize("4 new alchemy formula s tornout page ancient leshen decoction"),
+            parse_action("4 new alchemy formula s tornout page ancient leshen decoction"),
             Some(Action::Formula("s tornout page ancient leshen decoction".to_string()))
         );
         assert_eq!(
-            tokenize("new alchemy formula tornout page ekimmara decoction"),
+            parse_action("new alchemy formula tornout page ekimmara decoction"),
             Some(Action::Formula("tornout page ekimmara decoction".to_string()))
         );
         assert_eq!(
-            tokenize("5 gnew crafting diagram diagrtm broadhead bolt 2 r"),
+            parse_action("5 gnew crafting diagram diagrtm broadhead bolt 2 r"),
             Some(Action::Diagram("diagrtm broadhead bolt 2 r".to_string()))
         );
         assert_eq!(
-            tokenize("quest completed a frying pan spick and span"),
+            parse_action("quest completed a frying pan spick and span"),
             Some(Action::Quest("a frying pan spick and span".to_string()))
         );
     }
@@ -281,5 +281,73 @@ mod tests {
     #[test]
     fn test_db() {
         GameRun::new().unwrap();
+    }
+
+    #[test]
+    fn test_tokenize_2() {
+        let cases = &[
+            "quest completed a frying pan spick and span",
+            "quest completed a frying pan spick and span",
+            "quest completed a frying pan spick and span",
+            "quest completed a frying pan spick and span",
+            "quest completed a frying pan spick and span",
+            "quest completed a frying pan spick and span",
+            "quest completed afrying pan spick and span",
+            "quest completed a frying pan spick and span",
+            "g h b sr t ro o k quest completed we iy precious cargo ir nt",
+            "guv gtyg 5by g ny os quest completed b a precious cargo i zp r z an",
+            "ar o i at wy b bt rt i t i hebri y g z 2 pr b i 5 iar all quest completed t \
+             acpreciouscargd r i",
+            "quest completed precious cargo",
+            "quest completed bon deaths bed",
+            "quest completed ion deaths bed",
+            "quest completed bon deaths bed",
+            "quest completed ion deaths bed",
+            "quest completed on deaths bed",
+            "quest completed on deaths bed",
+            "quest completed a sondeathsbed",
+            "quest completed on deaths bed",
+            "quest completed on deaths bed",
+            "quest completed on deaths bed",
+            "lquest completed twisted firestarter s",
+            "rquest completed i twisted firestarter",
+            "dr at il jf qfbquest completed gtwisted firestarter t",
+            "5 j oquest completed k i ji witwisted firestarteriy o",
+            "quest completed bcontract devil by the well",
+            "f l fquest completed ocontract devil by the well",
+            "quest completed temerian valuables",
+            "quest completed temerian valuables",
+            "quest completed tn l the beast of white orchard",
+            "quest completed the beast of white orchard",
+            "quest completed lthe beast of white orchard",
+            "quest completed scavenger hunt viper school ge",
+            "quest completed scavenger hunt viper school ge",
+            "quest completed scavenger hunt viper school ge",
+            "quest completed scavenger hunt viper school ge",
+            "quest completed scavenger hunt viper school ge",
+            "quest completed scavenger hunt viper school ge",
+            "quest completed scavenger hunt viper school ge",
+            "quest completed deserter gold",
+            "quest completed deserter gold",
+            "quest completed deserter gold",
+            "quest completed deserter gold",
+            "quest completed deserter gold",
+            "quest completed deserter gold",
+            "quest completed deserter gold",
+            "quest completed deserter gold",
+            "quest completed dirty funds s",
+            "quest completed dirty funds",
+            "quest completed dirty funds",
+            "quest completed dirty funds",
+            "quest completed dirty funds",
+            "quest completed dirty funds",
+            "quest completed dirty funds",
+            "quest completed dirty funds",
+            "quest completed gmissing in action",
+        ];
+
+        for case in cases {
+            println!("{}   -> {:?}", case, parse_action(case));
+        }
     }
 }
