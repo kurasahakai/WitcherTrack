@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::time::Duration;
 
 use anyhow::Result;
 use lazy_static::lazy_static;
@@ -64,7 +65,16 @@ impl GameRun {
             r#"
             CREATE TABLE IF NOT EXISTS logs (
                 logtime TEXT,
-                message TEXT
+                message TEXT,
+                content TEXT
+            )
+            "#,
+            (),
+        )?;
+        conn.execute(
+            r#"
+            CREATE TABLE IF NOT EXISTS perf (
+                timing REAL
             )
             "#,
             (),
@@ -114,27 +124,35 @@ impl GameRun {
         Ok(Self { conn })
     }
 
-    pub fn log(&mut self, log: String) -> Result<()> {
-        tracing::info!("{log}");
-        self.conn.execute("INSERT INTO logs (logtime, message) VALUES (datetime(), ?)", [log])?;
+    pub fn log<S: AsRef<str>, T: AsRef<str>>(&mut self, message: S, content: T) -> Result<()> {
+        tracing::info!("{}: {}", message.as_ref(), content.as_ref());
+        self.conn.execute(
+            "INSERT INTO logs (logtime, message, content) VALUES (datetime(), ?, ?)",
+            [message.as_ref(), content.as_ref()],
+        )?;
+        Ok(())
+    }
+
+    pub fn timing(&mut self, time: Duration) -> Result<()> {
+        self.conn.execute("INSERT INTO perf (timing) VALUES (?)", [time.as_secs_f64()])?;
         Ok(())
     }
 
     pub fn flag_diagram(&mut self, diagram: &str) -> Result<()> {
         self.conn.execute("UPDATE diagrams SET found = 1 WHERE diagram = ?", [diagram])?;
-        self.log(format!("FOUND diagram {diagram}"))?;
+        self.log("FOUND DIAGRAM", diagram)?;
         Ok(())
     }
 
     pub fn flag_formula(&mut self, formula: &str) -> Result<()> {
         self.conn.execute("UPDATE formulae SET found = 1 WHERE formula = ?", [formula])?;
-        self.log(format!("FOUND formula {formula}"))?;
+        self.log("FOUND FORMULA", formula)?;
         Ok(())
     }
 
     pub fn flag_quest(&mut self, quest: &str) -> Result<()> {
         self.conn.execute("UPDATE quests SET found = 1 WHERE quest = ?", [quest])?;
-        self.log(format!("FOUND quest {quest}"))?;
+        self.log("FOUND QUEST", quest)?;
         Ok(())
     }
 }
@@ -189,10 +207,10 @@ pub fn text_preprocess<S: Into<String>>(s: S) -> String {
     s.into()
         .to_lowercase()
         .chars()
-        .filter(|&char| match char {
-            char if char.is_ascii_alphanumeric() => true,
-            ' ' => true,
-            _ => false,
+        .filter_map(|char| match char {
+            char if char.is_ascii_alphanumeric() => Some(char),
+            char if char.is_whitespace() => Some(' '),
+            _ => None,
         })
         .collect::<String>()
         .split_whitespace()

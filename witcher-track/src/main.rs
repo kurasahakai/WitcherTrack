@@ -1,6 +1,6 @@
 use std::io::Read;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use tracing::metadata::LevelFilter;
@@ -15,18 +15,22 @@ fn run() -> Result<()> {
     tracing_subscriber::fmt().with_max_level(LevelFilter::INFO).init();
 
     loop {
+        let start = Instant::now();
         let screenshot = screenshot::capture().and_then(|pic| unsafe { preprocess(pic) })?;
         let ocr_text =
             ocr_reader.get_ocr(&screenshot.into_cropped(0.4, 0.3)?).map(text_preprocess)?;
-        game_run.log(format!("Recognized: {ocr_text}"))?;
+        if !ocr_text.trim().is_empty() {
+            game_run.log("RECOGNIZED", &ocr_text)?;
+        }
         match tokenize(ocr_text) {
             Some(Action::Quest(v)) => game_run.flag_quest(&v)?,
             Some(Action::Formula(v)) => game_run.flag_formula(&v)?,
             Some(Action::Diagram(v)) => game_run.flag_diagram(&v)?,
             None => (),
         }
+        game_run.timing(start.elapsed())?;
 
-        thread::sleep(Duration::from_millis(100));
+        thread::sleep(Duration::from_millis(50));
     }
 }
 

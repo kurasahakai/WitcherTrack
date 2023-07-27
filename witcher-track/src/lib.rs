@@ -54,7 +54,7 @@ pub unsafe fn preprocess(picture: Picture) -> Result<Picture> {
     let picture = Picture::from(pixConvertRGBToGray(picture.pix, 0.0, 0.0, 0.0));
 
     // Threshold the picture.
-    let threshold = Picture::from(pixThresholdToBinary(picture.pix, 150));
+    let threshold = Picture::from(pixThresholdToBinary(picture.pix, 140));
     let target = Picture::from(pixCreate(
         pixGetWidth(threshold.pix),
         pixGetHeight(threshold.pix),
