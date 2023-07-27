@@ -9,9 +9,9 @@ use anyhow::{anyhow, Result};
 use leptonica_sys::{
     boxCreate, boxDestroy, boxGetGeometry, boxaDestroy, boxaGetBox, boxaGetCount, kernelDestroy,
     lept_free, makeGaussianKernel, pixClipRectangle, pixConnCompBB, pixConvertRGBToGray,
-    pixConvolveRGB, pixCreate, pixDestroy, pixDilateBrick, pixGetDepth, pixGetHeight, pixGetWidth,
-    pixInvert, pixRasterop, pixReadMem, pixThresholdToBinary, pixWriteMemPng, Pix, L_CLONE,
-    PIX_SRC,
+    pixConvolveRGB, pixCreate, pixDestroy, pixDilateBrick, pixGetDepth, pixGetHeight,
+    pixGetRGBPixel, pixGetWidth, pixInvert, pixRasterop, pixReadMem, pixSetRGBPixel,
+    pixThresholdToBinary, pixWriteMemPng, Pix, L_CLONE, PIX_SRC,
 };
 use tesseract_sys::{
     TessBaseAPI, TessBaseAPICreate, TessBaseAPIDelete, TessBaseAPIGetUTF8Text, TessBaseAPIInit3,
@@ -40,46 +40,69 @@ pub fn download_trained_data() -> Result<()> {
     Ok(())
 }
 
+// https://github.com/ChevyRay/color_space/blob/master/src/hsv.rs#L34
+fn rgb_to_hsv(r: i32, g: i32, b: i32) -> (u8, u8, u8) {
+    let r = r as f64 / 255.0;
+    let g = g as f64 / 255.0;
+    let b = b as f64 / 255.0;
+
+    let min = r.min(g.min(b));
+    let max = r.max(g.max(b));
+    let delta = max - min;
+
+    let v = max;
+    let s = match max > 1e-3 {
+        true => delta / max,
+        false => 0.0,
+    };
+    let h = match delta == 0.0 {
+        true => 0.0,
+        false => {
+            if r == max {
+                (g - b) / delta
+            } else if g == max {
+                2.0 + (b - r) / delta
+            } else {
+                4.0 + (r - g) / delta
+            }
+        },
+    };
+    let h = ((h * 60.0) + 360.0) % 360.0;
+
+    let h = h * 255. / 360.;
+    let s = s * 255.;
+    let v = v * 255.;
+    (h as u8, s as u8, v as u8)
+}
+
 /// Process picture to obtain something that's easy to extract OCR from.
 ///
 /// # Safety
 ///
 /// haha
 pub unsafe fn preprocess(picture: Picture) -> Result<Picture> {
-    let mut kern = makeGaussianKernel(2, 2, 0.3, 1.0);
-    let picture = Picture::from(pixConvolveRGB(picture.pix, kern));
-    kernelDestroy(&mut kern);
+    // let mut kern = makeGaussianKernel(2, 2, 0.3, 1.0);
+    // let picture = Picture::from(pixConvolveRGB(picture.pix, kern));
+    // kernelDestroy(&mut kern);
+    //
+    // New approach
 
-    // Convert to grayscale.
-    let picture = Picture::from(pixConvertRGBToGray(picture.pix, 0.0, 0.0, 0.0));
+    for y in 0..pixGetHeight(picture.pix) {
+        for x in 0..pixGetWidth(picture.pix) {
+            let (mut r, mut g, mut b) = (0, 0, 0);
+            pixGetRGBPixel(picture.pix, x, y, &mut r, &mut g, &mut b);
+            let (h, s, v) = rgb_to_hsv(r, g, b);
 
-    // Threshold the picture.
-    let threshold = Picture::from(pixThresholdToBinary(picture.pix, 140));
-    let target = Picture::from(pixCreate(
-        pixGetWidth(threshold.pix),
-        pixGetHeight(threshold.pix),
-        pixGetDepth(threshold.pix),
-    ));
-    pixInvert(threshold.pix, threshold.pix);
-    pixDilateBrick(threshold.pix, threshold.pix, 2, 2);
-
-    let mut boxa = pixConnCompBB(threshold.pix, 4);
-    for i in 0..boxaGetCount(boxa) {
-        let boxx = boxaGetBox(boxa, i, L_CLONE);
-        let mut p = [0i32; 4];
-        boxGetGeometry(boxx, &mut p[0], &mut p[1], &mut p[2], &mut p[3]);
-        let [x, y, w, h] = p;
-        let area = w * h;
-        let aspect_ratio = (w as f32) / (h as f32);
-
-        if aspect_ratio < 3.5 && area < 3000 {
-            pixRasterop(target.pix, x, y, w, h, PIX_SRC as _, threshold.pix, x, y);
+            let is_in_range = (h > 20 && h < 50) && (s > 60 && s < 120) && (v > 200);
+            if !is_in_range {
+                pixSetRGBPixel(picture.pix, x, y, 0, 0, 0);
+            }
         }
     }
-    boxaDestroy(&mut boxa);
-    pixInvert(target.pix, target.pix);
+    let picture = Picture::from(pixConvertRGBToGray(picture.pix, 0.0, 0.0, 0.0));
+    let picture = Picture::from(pixThresholdToBinary(picture.pix, 140));
 
-    Ok(target)
+    Ok(picture)
 }
 
 // RAII picture
@@ -193,39 +216,15 @@ mod tests {
     use std::time::{Duration, Instant};
     use std::{fs, thread};
 
-    use leptonica_sys::{boxCreate, boxDestroy, pixClipRectangle, pixWritePng};
+    use leptonica_sys::pixWritePng;
 
     use super::*;
     use crate::data::slugify;
 
-    const X: i32 = 336;
-    const Y: i32 = 15;
-    const W: i32 = 1584;
-    const H: i32 = 891;
-
-    const CW: i32 = W / 2;
-    const CH: i32 = H / 6;
-    const CY: i32 = (H - CH) / 2;
-
-    fn crop_pic(data: &[u8]) -> Picture {
-        unsafe {
-            let mut pix1 = pixReadMem(data.as_ptr(), data.len());
-            let mut box1 = boxCreate(X, Y, W, H);
-            let mut box2 = boxCreate(0, CY, CW, CH);
-            let mut pix2 = pixClipRectangle(pix1, box1, null_mut());
-            let pix3 = pixClipRectangle(pix2, box2, null_mut());
-            boxDestroy(&mut box1);
-            boxDestroy(&mut box2);
-            pixDestroy(&mut pix1);
-            pixDestroy(&mut pix2);
-            pix3.into()
-        }
-    }
-
     fn ocr(ocr_reader: &OcrReader, path: &str) {
         let start = Instant::now();
         let data = fs::read(path).unwrap();
-        let pic = crop_pic(&data);
+        let pic = unsafe { preprocess(Picture::from_mem(data)).unwrap() };
         let elapsed = start.elapsed();
         println!("{path}: {:?} took {elapsed:?}", ocr_reader.get_ocr(&pic).map(slugify));
     }
@@ -238,45 +237,35 @@ mod tests {
         let dest_path = CString::new(dest_path.to_str().unwrap()).unwrap();
 
         let data = fs::read(path).unwrap();
-        let pic = unsafe { preprocess(crop_pic(&data)).unwrap() };
+        let pic = unsafe { preprocess(Picture::from_mem(data)).unwrap() };
         unsafe { pixWritePng(dest_path.as_ptr(), pic.pix, 0.) };
     }
 
     #[test]
     fn test_preprocess() {
-        preprocess_fn("tests/fixtures/alchemy01.jpg");
-        preprocess_fn("tests/fixtures/alchemy02.jpg");
-        preprocess_fn("tests/fixtures/alchemy03.jpg");
-        preprocess_fn("tests/fixtures/alchemy04.jpg");
-        preprocess_fn("tests/fixtures/alchemy05.jpg");
-        preprocess_fn("tests/fixtures/diagram01.jpg");
-        preprocess_fn("tests/fixtures/diagram02.jpg");
-        preprocess_fn("tests/fixtures/diagram03.jpg");
-        preprocess_fn("tests/fixtures/diagram04.jpg");
-        preprocess_fn("tests/fixtures/diagram05.jpg");
-        preprocess_fn("tests/fixtures/diagram06.jpg");
-        preprocess_fn("tests/fixtures/quest01.jpg");
-        preprocess_fn("tests/fixtures/quest02.jpg");
-        preprocess_fn("tests/fixtures/quest03.jpg");
+        preprocess_fn("tests/fixtures/immagine.jpg");
+        preprocess_fn("tests/fixtures/immagine(1).jpg");
+        preprocess_fn("tests/fixtures/immagine(2).jpg");
+        preprocess_fn("tests/fixtures/immagine(3).jpg");
+        preprocess_fn("tests/fixtures/immagine(4).jpg");
+        preprocess_fn("tests/fixtures/immagine(5).jpg");
+        preprocess_fn("tests/fixtures/immagine(6).jpg");
+        preprocess_fn("tests/fixtures/immagine(7).jpg");
+        preprocess_fn("tests/fixtures/immagine(8).jpg");
     }
 
     #[test]
     fn test_ocr() {
         let ocr_reader = OcrReader::new().unwrap();
-        ocr(&ocr_reader, "tests/fixtures/alchemy01.jpg");
-        ocr(&ocr_reader, "tests/fixtures/alchemy02.jpg");
-        ocr(&ocr_reader, "tests/fixtures/alchemy03.jpg");
-        ocr(&ocr_reader, "tests/fixtures/alchemy04.jpg");
-        ocr(&ocr_reader, "tests/fixtures/alchemy05.jpg");
-        ocr(&ocr_reader, "tests/fixtures/diagram01.jpg");
-        ocr(&ocr_reader, "tests/fixtures/diagram02.jpg");
-        ocr(&ocr_reader, "tests/fixtures/diagram03.jpg");
-        ocr(&ocr_reader, "tests/fixtures/diagram04.jpg");
-        ocr(&ocr_reader, "tests/fixtures/diagram05.jpg");
-        ocr(&ocr_reader, "tests/fixtures/diagram06.jpg");
-        ocr(&ocr_reader, "tests/fixtures/quest01.jpg");
-        ocr(&ocr_reader, "tests/fixtures/quest02.jpg");
-        ocr(&ocr_reader, "tests/fixtures/quest03.jpg");
+        ocr(&ocr_reader, "tests/fixtures/immagine.jpg");
+        ocr(&ocr_reader, "tests/fixtures/immagine(1).jpg");
+        ocr(&ocr_reader, "tests/fixtures/immagine(2).jpg");
+        ocr(&ocr_reader, "tests/fixtures/immagine(3).jpg");
+        ocr(&ocr_reader, "tests/fixtures/immagine(4).jpg");
+        ocr(&ocr_reader, "tests/fixtures/immagine(5).jpg");
+        ocr(&ocr_reader, "tests/fixtures/immagine(6).jpg");
+        ocr(&ocr_reader, "tests/fixtures/immagine(7).jpg");
+        ocr(&ocr_reader, "tests/fixtures/immagine(8).jpg");
     }
 
     #[test]

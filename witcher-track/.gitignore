@@ -3,3 +3,4 @@ eng.traineddata
 Cargo.lock
 run.mkv
 /tests/fixtures/prep-*
+.ipynb_checkpoints
