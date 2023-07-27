@@ -8,7 +8,7 @@ fn out_dir() -> PathBuf {
 /// Download english Tesseract trained data if it is not present.
 pub fn download_trained_data() {
     const ENG_TRAINEDDATA_URL: &str =
-        "https://github.com/tesseract-ocr/tessdata/raw/main/eng.traineddata";
+        "https://github.com/tesseract-ocr/tessdata_best/raw/main/eng.traineddata";
 
     let trained_data_path = out_dir().join("eng.traineddata");
 

@@ -5,10 +5,14 @@ edition = "2021"
 
 [package.metadata.vcpkg]
 git = "https://github.com/microsoft/vcpkg"
-rev = "9d47b24"
+rev = "08f00b4"
+
+[package.metadata.vcpkg.target.'aarch64-apple-darwin']
+triplet = "arm64-osx-release"
+dependencies = ["leptonica", "tesseract"]
 
 [package.metadata.vcpkg.target.'x86_64-pc-windows-msvc']
-triplet = "x64-windows-static-md"
+triplet = "x64-windows-static"
 dependencies = ["leptonica", "tesseract"]
 
 [dependencies]
