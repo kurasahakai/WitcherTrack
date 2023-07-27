@@ -5,10 +5,10 @@ use std::time::{Duration, Instant};
 use anyhow::Result;
 use tracing::metadata::LevelFilter;
 use witcher_track::data::{parse_action, slugify, Action, GameRun};
-use witcher_track::{download_trained_data, preprocess, screenshot, OcrReader};
+use witcher_track::picture::preprocess;
+use witcher_track::{screenshot, OcrReader};
 
 fn run() -> Result<()> {
-    download_trained_data()?;
     let ocr_reader = OcrReader::new()?;
     let mut game_run = GameRun::new()?;
 
