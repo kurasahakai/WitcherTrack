@@ -14,6 +14,7 @@ fn run() -> Result<()> {
     let mut game_run = GameRun::new()?;
 
     tracing_subscriber::fmt().with_max_level(LevelFilter::INFO).init();
+    game_run.log("LOG", "Started")?;
 
     loop {
         let start = Instant::now();

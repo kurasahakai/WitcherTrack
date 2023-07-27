@@ -6,6 +6,8 @@ use std::slice;
 use anyhow::{anyhow, Result};
 use leptonica_sys::*;
 
+use crate::HSL_RANGE;
+
 /// RAII picture.
 pub struct Picture {
     pix: *mut Pix,
@@ -119,6 +121,8 @@ fn rgb_to_hsv(r: i32, g: i32, b: i32) -> (u8, u8, u8) {
 ///
 /// haha
 pub unsafe fn preprocess(picture: Picture) -> Result<Picture> {
+    let [(hmin, hmax), (smin, smax), (lmin, lmax)] = HSL_RANGE;
+
     // Discard pixels outside of a narrow HSV range.
     for y in 0..pixGetHeight(picture.pix) {
         for x in 0..pixGetWidth(picture.pix) {
@@ -126,7 +130,8 @@ pub unsafe fn preprocess(picture: Picture) -> Result<Picture> {
             pixGetRGBPixel(picture.pix, x, y, &mut r, &mut g, &mut b);
             let (h, s, v) = rgb_to_hsv(r, g, b);
 
-            let is_in_range = (h > 20 && h < 50) && (s > 60 && s < 120) && (v > 200);
+            let is_in_range =
+                (h > hmin && h < hmax) && (s > smin && s < smax) && (v > lmin && v < lmax);
             if !is_in_range {
                 pixSetRGBPixel(picture.pix, x, y, 0, 0, 0);
             }

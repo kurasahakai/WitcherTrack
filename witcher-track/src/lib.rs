@@ -15,7 +15,8 @@ pub mod screenshot;
 // Tesseract trained data.
 const TRAINED_DATA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/eng.traineddata"));
 
-pub const CROP_RANGE: (f32, f32) = (0.6, 0.3);
+pub const CROP_RANGE: (f32, f32) = (0.6, 0.25);
+pub const HSL_RANGE: [(u8, u8); 3] = [(0, 60), (50, 120), (210, 255)];
 
 /// RAII wrapper around Tesseract API
 pub struct OcrReader {
