@@ -196,7 +196,7 @@ mod tests {
     use leptonica_sys::{boxCreate, boxDestroy, pixClipRectangle, pixWritePng};
 
     use super::*;
-    use crate::data::text_preprocess;
+    use crate::data::slugify;
 
     const X: i32 = 336;
     const Y: i32 = 15;
@@ -227,7 +227,7 @@ mod tests {
         let data = fs::read(path).unwrap();
         let pic = crop_pic(&data);
         let elapsed = start.elapsed();
-        println!("{path}: {:?} took {elapsed:?}", ocr_reader.get_ocr(&pic).map(text_preprocess));
+        println!("{path}: {:?} took {elapsed:?}", ocr_reader.get_ocr(&pic).map(slugify));
     }
 
     fn preprocess_fn<P: AsRef<Path>>(path: P) {

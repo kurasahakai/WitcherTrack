@@ -7,23 +7,15 @@ use rusqlite::Connection;
 
 lazy_static! {
     static ref DIAGRAMS: HashSet<String> =
-        include_str!("../data/tw3diagramlist.txt").trim().lines().map(text_preprocess).collect();
+        include_str!("../data/tw3diagramlist.txt").trim().lines().map(slugify).collect();
     static ref FORMULAE: HashSet<String> =
-        include_str!("../data/tw3formulaelist.txt").trim().lines().map(text_preprocess).collect();
+        include_str!("../data/tw3formulaelist.txt").trim().lines().map(slugify).collect();
     static ref QUESTS: HashSet<String> =
-        include_str!("../data/tw3questlist.txt").trim().lines().map(text_preprocess).collect();
+        include_str!("../data/tw3questlist.txt").trim().lines().map(slugify).collect();
     static ref DEFAULT_DIAGRAMS: HashSet<String> =
-        include_str!("../data/tw3defaultdiagramlist.txt")
-            .trim()
-            .lines()
-            .map(text_preprocess)
-            .collect();
+        include_str!("../data/tw3defaultdiagramlist.txt").trim().lines().map(slugify).collect();
     static ref DEFAULT_FORMULAE: HashSet<String> =
-        include_str!("../data/tw3defaultformulaelist.txt")
-            .trim()
-            .lines()
-            .map(text_preprocess)
-            .collect();
+        include_str!("../data/tw3defaultformulaelist.txt").trim().lines().map(slugify).collect();
 }
 
 pub struct GameRun {
@@ -203,13 +195,13 @@ pub fn tokenize<S: AsRef<str>>(s: S) -> Option<Action> {
     None
 }
 
-pub fn text_preprocess<S: Into<String>>(s: S) -> String {
+pub fn slugify<S: Into<String>>(s: S) -> String {
     s.into()
-        .to_lowercase()
         .chars()
         .filter_map(|char| match char {
-            char if char.is_ascii_alphanumeric() => Some(char),
+            char if char.is_ascii_alphanumeric() => Some(char.to_ascii_lowercase()),
             char if char.is_whitespace() => Some(' '),
+            char if char.is_ascii_punctuation() => Some(' '),
             _ => None,
         })
         .collect::<String>()

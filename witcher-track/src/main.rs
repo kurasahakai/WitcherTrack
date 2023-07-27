@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use tracing::metadata::LevelFilter;
-use witcher_track::data::{text_preprocess, tokenize, Action, GameRun};
+use witcher_track::data::{slugify, tokenize, Action, GameRun};
 use witcher_track::{download_trained_data, preprocess, screenshot, OcrReader};
 
 fn run() -> Result<()> {
@@ -17,8 +17,7 @@ fn run() -> Result<()> {
     loop {
         let start = Instant::now();
         let screenshot = screenshot::capture().and_then(|pic| unsafe { preprocess(pic) })?;
-        let ocr_text =
-            ocr_reader.get_ocr(&screenshot.into_cropped(0.4, 0.3)?).map(text_preprocess)?;
+        let ocr_text = ocr_reader.get_ocr(&screenshot.into_cropped(0.4, 0.3)?).map(slugify)?;
         if !ocr_text.trim().is_empty() {
             game_run.log("RECOGNIZED", &ocr_text)?;
         }
