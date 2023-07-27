@@ -143,6 +143,10 @@ pub unsafe fn preprocess(picture: Picture) -> Result<Picture> {
 
     // Threshold to binary.
     let picture = Picture::from(pixThresholdToBinary(picture.pix, 140));
+    // pixInvert(picture.pix, picture.pix);
+    // pixDilateBrick(picture.pix, picture.pix, 2, 2);
+    // pixErodeBrick(picture.pix, picture.pix, 2, 2);
+    // pixInvert(picture.pix, picture.pix);
 
     Ok(picture)
 }
