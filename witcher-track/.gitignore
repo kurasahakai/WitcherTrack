@@ -1,6 +1,7 @@
 /target
+/tests/fixtures/prep-*
+font.ttf
 eng.traineddata
 Cargo.lock
 run.mkv
-/tests/fixtures/prep-*
 .ipynb_checkpoints
