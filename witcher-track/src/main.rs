@@ -10,6 +10,7 @@ use witcher_track::picture::preprocess;
 use witcher_track::{screenshot, OcrReader};
 
 fn run() -> Result<()> {
+    ansi_term::enable_ansi_support().unwrap();
     let ocr_reader = OcrReader::new()?;
     let mut game_run = GameRun::new()?;
 
