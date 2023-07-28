@@ -15,6 +15,7 @@ pub mod screenshot;
 
 // Tesseract trained data.
 const TRAINED_DATA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/eng.traineddata"));
+// const TRAINED_DATA: &[u8] = include_bytes!("../witcher.traineddata");
 
 pub struct Crop {
     pub left: f32,

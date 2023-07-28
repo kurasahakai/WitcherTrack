@@ -144,6 +144,7 @@ pub unsafe fn preprocess(picture: Picture) -> Result<Picture> {
             pixRasterop(*bin_pic, x, y, w, h, PIX_CLR as _, *bin_pic, x, y);
         }
     }
+    pixInvert(*bin_pic, *bin_pic);
 
     Ok(bin_pic)
 }

@@ -2,7 +2,7 @@ import os
 from glob import glob
 from pathlib import Path
 from tqdm import tqdm
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 if __name__ == '__main__':
     samples = []
@@ -36,6 +36,7 @@ if __name__ == '__main__':
         img = Image.new('L', (box[2] + 4, box[3] + 4))
         draw = ImageDraw.Draw(img)
         draw.multiline_text((2, 2), text, font=font, fill=255)
+        img = ImageOps.invert(img)
         img.save(base_path / (path + '.png'))
         with open(base_path / (path + '.gt.txt'), 'w') as fp:
             fp.write(text)
