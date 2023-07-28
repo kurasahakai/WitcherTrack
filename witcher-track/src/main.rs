@@ -4,10 +4,10 @@ use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use tracing::metadata::LevelFilter;
-use witcher_track::data::{parse_action, slugify, Action};
+use witcher_track::data::{parse_action, Action};
 use witcher_track::db::GameRun;
 use witcher_track::picture::preprocess;
-use witcher_track::{screenshot, OcrReader, CROP_RANGE};
+use witcher_track::{screenshot, OcrReader};
 
 fn run() -> Result<()> {
     let ocr_reader = OcrReader::new()?;
@@ -19,8 +19,8 @@ fn run() -> Result<()> {
     loop {
         let start = Instant::now();
         let screenshot = screenshot::capture().and_then(|pic| unsafe { preprocess(pic) })?;
-        let cropped = screenshot.into_cropped(CROP_RANGE.0, CROP_RANGE.1)?;
-        let ocr_text = ocr_reader.get_ocr(&cropped).map(slugify)?;
+        let cropped = screenshot.into_cropped()?;
+        let ocr_text = ocr_reader.get_ocr(&cropped)?;
         if !ocr_text.trim().is_empty() {
             game_run.log("RECOGNIZED", &ocr_text)?;
         }

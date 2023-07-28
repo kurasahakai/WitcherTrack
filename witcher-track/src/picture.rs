@@ -7,7 +7,7 @@ use std::slice;
 use anyhow::{anyhow, Result};
 use leptonica_sys::*;
 
-use crate::HSV_RANGE;
+use crate::{CROP_RANGE, HSV_RANGE};
 
 /// RAII picture.
 pub struct Picture {
@@ -43,7 +43,7 @@ impl Picture {
     }
 
     /// Crop the center-leftmost part.
-    pub fn into_cropped(self, width_pct: f32, height_pct: f32) -> Result<Self> {
+    pub fn into_cropped(self) -> Result<Self> {
         let pix = unsafe {
             let width = pixGetWidth(self.pix) as f32;
             let height = pixGetHeight(self.pix) as f32;
@@ -52,11 +52,17 @@ impl Picture {
                 return Err(anyhow!("Width and height are {width} {height}, can't crop"));
             }
 
-            let new_y = height * (1. - height_pct) / 2.;
-            let new_width = width * width_pct;
-            let new_height = height * height_pct;
+            let left = width * CROP_RANGE.left;
+            let top = height * CROP_RANGE.top;
+            let right = width * (1. - CROP_RANGE.right);
+            let bottom = height * (1. - CROP_RANGE.bottom);
 
-            let mut boxx = boxCreate(0, new_y as i32, new_width as i32, new_height as i32);
+            let x = left as i32;
+            let y = top as i32;
+            let width = (right - left) as i32;
+            let height = (bottom - top) as i32;
+
+            let mut boxx = boxCreate(x, y, width, height);
             let pix = pixClipRectangle(self.pix, boxx, null_mut());
             boxDestroy(&mut boxx);
             pix
@@ -111,9 +117,31 @@ pub unsafe fn preprocess(picture: Picture) -> Result<Picture> {
             let (h, s, v) = (h as u8, s as u8, v as u8);
 
             let is_in_range = HRANGE.contains(&h) && SRANGE.contains(&s) && VRANGE.contains(&v);
-            if !is_in_range {
+            if is_in_range {
                 pixSetPixel(*bin_pic, x, y, 1);
             }
+        }
+    }
+
+    pixDilateBrick(*bin_pic, *bin_pic, 3, 3);
+    pixErodeBrick(*bin_pic, *bin_pic, 3, 3);
+
+    // Connected component analysis
+    let connected_comps = pixConnComp(*bin_pic, null_mut(), 4);
+    for i in 0..boxaGetCount(connected_comps) {
+        let bbox = boxaGetBox(connected_comps, i, L_CLONE as _);
+        let (mut x, mut y, mut w, mut h) = (0, 0, 0, 0);
+        boxGetGeometry(bbox, &mut x, &mut y, &mut w, &mut h);
+
+        let area = w * h;
+        let aspect_ratio = w as f32 / h as f32;
+
+        if !(100..5000).contains(&area)
+            && !(0.3..0.7).contains(&aspect_ratio)
+            && !(10..30).contains(&w)
+            && !(20..40).contains(&h)
+        {
+            pixRasterop(*bin_pic, x, y, w, h, PIX_CLR as _, *bin_pic, x, y);
         }
     }
 
@@ -127,7 +155,6 @@ mod tests {
     use std::path::Path;
 
     use super::*;
-    use crate::CROP_RANGE;
 
     fn preprocess_and_save<P: AsRef<Path>>(path: P) {
         let path = path.as_ref();
@@ -137,7 +164,7 @@ mod tests {
         let dest_path = CString::new(dest_path.to_str().unwrap()).unwrap();
 
         let data = fs::read(path).unwrap();
-        let cropped = Picture::from_mem(data).into_cropped(CROP_RANGE.0, CROP_RANGE.1).unwrap();
+        let cropped = Picture::from_mem(data).into_cropped().unwrap();
         let pic = unsafe { preprocess(cropped).unwrap() };
         unsafe { pixWritePng(dest_path.as_ptr(), pic.pix, 0.) };
     }

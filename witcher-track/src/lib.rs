@@ -16,8 +16,17 @@ pub mod screenshot;
 // Tesseract trained data.
 const TRAINED_DATA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/eng.traineddata"));
 
-pub const CROP_RANGE: (f32, f32) = (0.6, 0.25);
+pub struct Crop {
+    pub left: f32,
+    pub right: f32,
+    pub top: f32,
+    pub bottom: f32,
+}
+
+// pub const CROP_RANGE: (f32, f32) = (0.6, 0.25);
+pub const CROP_RANGE: Crop = Crop { left: 0.01, right: 0.5, top: 0.45, bottom: 0.35 };
 pub const HSV_RANGE: (Range<u8>, Range<u8>, Range<u8>) = (0..50, 50..120, 200..255);
+pub const STRSIM_THRESHOLD: f64 = 0.7;
 
 /// RAII wrapper around Tesseract API
 pub struct OcrReader {
@@ -59,6 +68,7 @@ impl OcrReader {
 
         unsafe { TessDeleteText(text) };
 
+        println!("{text_str}");
         Ok(text_str)
     }
 }
@@ -75,7 +85,7 @@ mod tests {
     use std::time::Instant;
 
     use super::*;
-    use crate::data::slugify;
+    use crate::data::parse_action;
     use crate::picture::preprocess;
 
     fn run_ocr(ocr_reader: &OcrReader, path: &str) {
@@ -83,7 +93,7 @@ mod tests {
         let data = fs::read(path).unwrap();
 
         let start_crop = Instant::now();
-        let pic = Picture::from_mem(data).into_cropped(CROP_RANGE.0, CROP_RANGE.1).unwrap();
+        let pic = Picture::from_mem(data).into_cropped().unwrap();
         let elapsed_crop = start_crop.elapsed();
 
         let start_preprocess = Instant::now();
@@ -91,15 +101,20 @@ mod tests {
         let elapsed_preprocess = start_preprocess.elapsed();
 
         let start_ocr = Instant::now();
-        let res = ocr_reader.get_ocr(&pic).map(slugify);
+        let res = ocr_reader.get_ocr(&pic);
         let elapsed_ocr = start_ocr.elapsed();
 
+        let start_parse = Instant::now();
+        let tok = res.as_ref().ok().and_then(parse_action);
+        let elapsed_parse = start_parse.elapsed();
+
         let elapsed = start.elapsed();
-        println!("{path}: {res:?}, took:");
+        println!("{path}\n{res:?}\n{tok:?}\nTook:");
         println!("  All         {elapsed:?}");
         println!("  Crop        {elapsed_crop:?}");
         println!("  Preprocess  {elapsed_preprocess:?}");
         println!("  Ocr         {elapsed_ocr:?}");
+        println!("  Parse       {elapsed_parse:?}");
     }
 
     #[test]

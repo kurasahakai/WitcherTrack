@@ -1,7 +1,10 @@
 use std::collections::HashSet;
+use std::str::Lines;
 
 use lazy_static::lazy_static;
 use strsim::normalized_damerau_levenshtein;
+
+use crate::STRSIM_THRESHOLD;
 
 lazy_static! {
     pub static ref DIAGRAMS: HashSet<String> =
@@ -23,52 +26,42 @@ pub enum Action {
     Diagram(String),
 }
 
+enum ActionType {
+    Quest,
+    Formula,
+    Diagram,
+}
+
+fn check_str(a: &str, b: &str) -> bool {
+    normalized_damerau_levenshtein(a, b) > 0.7
+}
+
+fn find_action(it: &mut Lines) -> Option<ActionType> {
+    it.find_map(|line| {
+        let line = slugify(line);
+
+        if check_str(&line, "quest completed") {
+            Some(ActionType::Quest)
+        } else if check_str(&line, "new alchemy formula") {
+            Some(ActionType::Formula)
+        } else if check_str(&line, "new crafting diagram") {
+            Some(ActionType::Diagram)
+        } else {
+            None
+        }
+    })
+}
+
 pub fn parse_action<S: AsRef<str>>(s: S) -> Option<Action> {
-    const THRESHOLD: f64 = 0.7;
+    let mut lines = s.as_ref().trim().lines();
+    let action = find_action(&mut lines)?;
+    let target = slugify(lines.next()?);
 
-    fn check_str(a: &str, b: &str) -> bool {
-        normalized_damerau_levenshtein(a, b) > 0.8
+    match action {
+        ActionType::Quest => get_closest_match(&target, &*QUESTS).map(Action::Quest),
+        ActionType::Formula => get_closest_match(&target, &*FORMULAE).map(Action::Formula),
+        ActionType::Diagram => get_closest_match(&target, &*DIAGRAMS).map(Action::Diagram),
     }
-
-    fn quest_completed(s: &str) -> Option<Action> {
-        let mut it = s.split_whitespace();
-        it.find(|&s| check_str(s, "quest"))?;
-        it.find(|&s| check_str(s, "completed"))?;
-        get_closest_match(&it.intersperse(" ").collect::<String>(), &*QUESTS, THRESHOLD)
-            .map(Action::Quest)
-    }
-
-    fn new_alchemy_formula(s: &str) -> Option<Action> {
-        let mut it = s.split_whitespace();
-        it.find(|&s| check_str(s, "new"))?;
-        it.find(|&s| check_str(s, "alchemy"))?;
-        it.find(|&s| check_str(s, "formula"))?;
-        get_closest_match(&it.intersperse(" ").collect::<String>(), &*FORMULAE, THRESHOLD)
-            .map(Action::Formula)
-    }
-
-    fn new_crafting_diagram(s: &str) -> Option<Action> {
-        let mut it = s.split_whitespace();
-        it.find(|&s| check_str(s, "new"))?;
-        it.find(|&s| check_str(s, "crafting"))?;
-        it.find(|&s| check_str(s, "diagram"))?;
-        get_closest_match(&it.intersperse(" ").collect::<String>(), &*DIAGRAMS, THRESHOLD)
-            .map(Action::Diagram)
-    }
-
-    if let Some(q) = quest_completed(s.as_ref()) {
-        return Some(q);
-    }
-
-    if let Some(q) = new_alchemy_formula(s.as_ref()) {
-        return Some(q);
-    }
-
-    if let Some(q) = new_crafting_diagram(s.as_ref()) {
-        return Some(q);
-    }
-
-    None
 }
 
 pub fn slugify<S: Into<String>>(s: S) -> String {
@@ -86,7 +79,7 @@ pub fn slugify<S: Into<String>>(s: S) -> String {
         .collect::<String>()
 }
 
-fn get_closest_match<'a, I>(word: &str, possibilities: I, cutoff: f64) -> Option<String>
+fn get_closest_match<'a, I>(word: &str, possibilities: I) -> Option<String>
 where
     I: IntoIterator<Item = &'a String>,
 {
@@ -94,7 +87,7 @@ where
         .into_iter()
         .filter_map(|possibility| {
             let score = normalized_damerau_levenshtein(word, possibility);
-            if score >= cutoff {
+            if score >= STRSIM_THRESHOLD {
                 Some((possibility, score))
             } else {
                 None
@@ -103,9 +96,6 @@ where
         .collect();
 
     matches_with_scores.sort_by(|(_, score1), (_, score2)| score2.partial_cmp(score1).unwrap());
-    // for k in &matches_with_scores {
-    //     println!("{k:?}");
-    // }
 
     matches_with_scores.into_iter().map(|(matched_word, _)| matched_word.to_string()).next()
 }
