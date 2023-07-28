@@ -7,3 +7,4 @@ Cargo.lock
 run.mkv
 .ipynb_checkpoints
 *.db-journal
+tw3hundo.db

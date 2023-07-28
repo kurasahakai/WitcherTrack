@@ -41,7 +41,7 @@ unsafe fn get_witcher_rect() -> (i32, i32, u32, u32) {
 
 // ffmpeg -i run.mkv tests/fixtures/mov/mov%06d.png
 pub struct MovPng {
-    handle: JoinHandle<()>,
+    _handle: JoinHandle<()>,
     rx: Receiver<(usize, Vec<u8>)>,
 }
 
@@ -66,7 +66,7 @@ impl MovPng {
                 tx.send((idx, vec)).unwrap();
             }
         });
-        Self { handle, rx }
+        Self { _handle: handle, rx }
     }
 }
 
