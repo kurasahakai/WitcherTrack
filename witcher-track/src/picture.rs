@@ -1,12 +1,13 @@
 //! Functions for loading and preprocessing pictures.
 
+use std::ops::{Deref, Range};
 use std::ptr::null_mut;
 use std::slice;
 
 use anyhow::{anyhow, Result};
 use leptonica_sys::*;
 
-use crate::HSL_RANGE;
+use crate::HSV_RANGE;
 
 /// RAII picture.
 pub struct Picture {
@@ -65,6 +66,14 @@ impl Picture {
     }
 }
 
+impl Deref for Picture {
+    type Target = *mut Pix;
+
+    fn deref(&self) -> &Self::Target {
+        &self.pix
+    }
+}
+
 impl From<*mut Pix> for Picture {
     fn from(pix: *mut Pix) -> Self {
         Self { pix }
@@ -79,76 +88,36 @@ impl Drop for Picture {
     }
 }
 
-// Convert a RGB color to HSV.
-// https://github.com/ChevyRay/color_space/blob/master/src/hsv.rs#L34
-fn rgb_to_hsv(r: i32, g: i32, b: i32) -> (u8, u8, u8) {
-    let r = r as f64 / 255.0;
-    let g = g as f64 / 255.0;
-    let b = b as f64 / 255.0;
-
-    let min = r.min(g.min(b));
-    let max = r.max(g.max(b));
-    let delta = max - min;
-
-    let v = max;
-    let s = match max > 1e-3 {
-        true => delta / max,
-        false => 0.0,
-    };
-    let h = match delta == 0.0 {
-        true => 0.0,
-        false => {
-            if r == max {
-                (g - b) / delta
-            } else if g == max {
-                2.0 + (b - r) / delta
-            } else {
-                4.0 + (r - g) / delta
-            }
-        },
-    };
-    let h = ((h * 60.0) + 360.0) % 360.0;
-
-    let h = h * 255. / 360.;
-    let s = s * 255.;
-    let v = v * 255.;
-    (h as u8, s as u8, v as u8)
-}
-
 /// Process picture to obtain something that's easy to extract OCR from.
 ///
 /// # Safety
 ///
 /// haha
 pub unsafe fn preprocess(picture: Picture) -> Result<Picture> {
-    let [(hmin, hmax), (smin, smax), (lmin, lmax)] = HSL_RANGE;
+    const HRANGE: Range<u8> = HSV_RANGE.0;
+    const SRANGE: Range<u8> = HSV_RANGE.1;
+    const VRANGE: Range<u8> = HSV_RANGE.2;
 
     // Discard pixels outside of a narrow HSV range.
-    for y in 0..pixGetHeight(picture.pix) {
-        for x in 0..pixGetWidth(picture.pix) {
-            let (mut r, mut g, mut b) = (0, 0, 0);
-            pixGetRGBPixel(picture.pix, x, y, &mut r, &mut g, &mut b);
-            let (h, s, v) = rgb_to_hsv(r, g, b);
+    let hsv_pic = Picture::from(pixConvertRGBToHSV(null_mut(), *picture));
+    let bin_pic = Picture::from(pixCreate(pixGetWidth(*picture), pixGetHeight(*picture), 1));
 
-            let is_in_range =
-                (h > hmin && h < hmax) && (s > smin && s < smax) && (v > lmin && v < lmax);
+    // Loop through all pixels.
+    for y in 0..pixGetHeight(*picture) {
+        for x in 0..pixGetWidth(*picture) {
+            // Extract HSV point at (x, y).
+            let (mut h, mut s, mut v) = (0, 0, 0);
+            pixGetRGBPixel(*hsv_pic, x, y, &mut h, &mut s, &mut v);
+            let (h, s, v) = (h as u8, s as u8, v as u8);
+
+            let is_in_range = HRANGE.contains(&h) && SRANGE.contains(&s) && VRANGE.contains(&v);
             if !is_in_range {
-                pixSetRGBPixel(picture.pix, x, y, 0, 0, 0);
+                pixSetPixel(*bin_pic, x, y, 1);
             }
         }
     }
 
-    // Convert to grayscale.
-    let picture = Picture::from(pixConvertRGBToGray(picture.pix, 0.0, 0.0, 0.0));
-
-    // Threshold to binary.
-    let picture = Picture::from(pixThresholdToBinary(picture.pix, 140));
-    // pixInvert(picture.pix, picture.pix);
-    // pixDilateBrick(picture.pix, picture.pix, 2, 2);
-    // pixErodeBrick(picture.pix, picture.pix, 2, 2);
-    // pixInvert(picture.pix, picture.pix);
-
-    Ok(picture)
+    Ok(bin_pic)
 }
 
 #[cfg(test)]

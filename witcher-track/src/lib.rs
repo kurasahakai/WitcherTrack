@@ -1,6 +1,7 @@
 #![feature(iter_intersperse)]
 
 use std::ffi::CStr;
+use std::ops::Range;
 use std::ptr::null_mut;
 
 use anyhow::Result;
@@ -16,7 +17,7 @@ pub mod screenshot;
 const TRAINED_DATA: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/eng.traineddata"));
 
 pub const CROP_RANGE: (f32, f32) = (0.6, 0.25);
-pub const HSL_RANGE: [(u8, u8); 3] = [(0, 60), (50, 120), (210, 255)];
+pub const HSV_RANGE: (Range<u8>, Range<u8>, Range<u8>) = (0..50, 50..120, 200..255);
 
 /// RAII wrapper around Tesseract API
 pub struct OcrReader {
