@@ -26,8 +26,30 @@ pub struct Crop {
 
 // pub const CROP_RANGE: (f32, f32) = (0.6, 0.25);
 pub const CROP_RANGE: Crop = Crop { left: 0.01, right: 0.5, top: 0.45, bottom: 0.35 };
-pub const HSV_RANGE: (Range<u8>, Range<u8>, Range<u8>) = (0..50, 50..120, 200..255);
+pub const HSV_RANGE: (Range<u8>, Range<u8>, Range<u8>) = (0..70, 20..120, 150..255);
 pub const STRSIM_THRESHOLD: f64 = 0.7;
+
+pub const TEST_CASES: &[&str] = &[
+    "tests/fixtures/immagine.jpg",
+    "tests/fixtures/immagine(1).jpg",
+    "tests/fixtures/immagine(2).jpg",
+    "tests/fixtures/immagine(3).jpg",
+    "tests/fixtures/immagine(4).jpg",
+    "tests/fixtures/immagine(5).jpg",
+    "tests/fixtures/immagine(6).jpg",
+    "tests/fixtures/immagine(7).jpg",
+    "tests/fixtures/immagine(8).jpg",
+    "tests/fixtures/mov000318.png",
+    "tests/fixtures/mov000735.png",
+    "tests/fixtures/mov000757.png",
+    "tests/fixtures/mov002859.png",
+    "tests/fixtures/mov002860.png",
+    "tests/fixtures/mov002905.png",
+    "tests/fixtures/mov008372.png",
+    "tests/fixtures/mov011049.png",
+    "tests/fixtures/mov011121.png",
+    "tests/fixtures/mov020521.png",
+];
 
 /// RAII wrapper around Tesseract API
 pub struct OcrReader {
@@ -69,7 +91,6 @@ impl OcrReader {
 
         unsafe { TessDeleteText(text) };
 
-        println!("{text_str}");
         Ok(text_str)
     }
 }
@@ -110,6 +131,7 @@ mod tests {
         let elapsed_parse = start_parse.elapsed();
 
         let elapsed = start.elapsed();
+        println!("--- test case ---");
         println!("{path}\n{res:?}\n{tok:?}\nTook:");
         println!("  All         {elapsed:?}");
         println!("  Crop        {elapsed_crop:?}");
@@ -121,14 +143,8 @@ mod tests {
     #[test]
     fn test_ocr() {
         let ocr_reader = OcrReader::new().unwrap();
-        run_ocr(&ocr_reader, "tests/fixtures/immagine.jpg");
-        run_ocr(&ocr_reader, "tests/fixtures/immagine(1).jpg");
-        run_ocr(&ocr_reader, "tests/fixtures/immagine(2).jpg");
-        run_ocr(&ocr_reader, "tests/fixtures/immagine(3).jpg");
-        run_ocr(&ocr_reader, "tests/fixtures/immagine(4).jpg");
-        run_ocr(&ocr_reader, "tests/fixtures/immagine(5).jpg");
-        run_ocr(&ocr_reader, "tests/fixtures/immagine(6).jpg");
-        run_ocr(&ocr_reader, "tests/fixtures/immagine(7).jpg");
-        run_ocr(&ocr_reader, "tests/fixtures/immagine(8).jpg");
+        for test_case in TEST_CASES {
+            run_ocr(&ocr_reader, test_case);
+        }
     }
 }

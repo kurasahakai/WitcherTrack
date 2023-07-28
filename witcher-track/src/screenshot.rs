@@ -1,5 +1,9 @@
+use std::sync::mpsc::{self, Receiver};
+use std::thread::{self, JoinHandle};
+
 use anyhow::{anyhow, Result};
 use leptonica_sys::pixReadMem;
+use rusqlite::Connection;
 use screenshots::Screen;
 use windows::w;
 use windows::Win32::Foundation::RECT;
@@ -33,4 +37,43 @@ unsafe fn get_witcher_rect() -> (i32, i32, u32, u32) {
     let (width, height) = (rect.right - rect.left, rect.bottom - rect.top);
 
     (left, top, width as u32, height as u32)
+}
+
+// ffmpeg -i run.mkv tests/fixtures/mov/mov%06d.png
+pub struct MovPng {
+    handle: JoinHandle<()>,
+    rx: Receiver<(usize, Vec<u8>)>,
+}
+
+impl Default for MovPng {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl MovPng {
+    pub fn new() -> Self {
+        let (tx, rx) = mpsc::channel();
+        let handle = thread::spawn(move || {
+            let con = Connection::open("f:/movie.db").unwrap();
+            let mut stmt = con.prepare("SELECT idx, blob FROM blobs").unwrap();
+
+            for row in stmt
+                .query_map([], |row| Ok((row.get::<_, usize>(0)?, row.get::<_, Vec<u8>>(1)?)))
+                .unwrap()
+            {
+                let (idx, vec) = row.unwrap();
+                tx.send((idx, vec)).unwrap();
+            }
+        });
+        Self { handle, rx }
+    }
+}
+
+impl Iterator for MovPng {
+    type Item = (usize, Picture);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.rx.recv().ok().map(|(idx, v)| (idx, Picture::from_mem(v)))
+    }
 }

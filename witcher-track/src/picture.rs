@@ -1,5 +1,6 @@
 //! Functions for loading and preprocessing pictures.
 
+use std::ffi::CString;
 use std::ops::{Deref, Range};
 use std::ptr::null_mut;
 use std::slice;
@@ -18,6 +19,12 @@ impl Picture {
     /// Read image from memory.
     pub fn from_mem(mem: Vec<u8>) -> Self {
         Picture::from(unsafe { pixReadMem(mem.as_ptr(), mem.len()) })
+    }
+
+    /// Read image from file.
+    pub fn from_file(path: String) -> Self {
+        let path = CString::new(path).unwrap();
+        Picture::from(unsafe { pixRead(path.as_ptr()) })
     }
 
     /// Return pointer to leptonica Pix.
@@ -63,9 +70,10 @@ impl Picture {
             let height = (bottom - top) as i32;
 
             let mut boxx = boxCreate(x, y, width, height);
-            let pix = pixClipRectangle(self.pix, boxx, null_mut());
+            let pix = Picture::from(pixClipRectangle(self.pix, boxx, null_mut()));
             boxDestroy(&mut boxx);
-            pix
+
+            pixScale(pix.pix, 2.0, 2.0)
         };
 
         Ok(Self::from(pix))
@@ -136,10 +144,9 @@ pub unsafe fn preprocess(picture: Picture) -> Result<Picture> {
         let area = w * h;
         let aspect_ratio = w as f32 / h as f32;
 
-        if !(100..5000).contains(&area)
-            && !(0.3..0.7).contains(&aspect_ratio)
-            && !(10..30).contains(&w)
-            && !(20..40).contains(&h)
+        if !(100..30000).contains(&area) && !(0.0..1.0).contains(&aspect_ratio)
+        // && !(10..30).contains(&w)
+        // && !(20..40).contains(&h)
         {
             pixRasterop(*bin_pic, x, y, w, h, PIX_CLR as _, *bin_pic, x, y);
         }
@@ -156,11 +163,17 @@ mod tests {
     use std::path::Path;
 
     use super::*;
+    use crate::TEST_CASES;
 
     fn preprocess_and_save<P: AsRef<Path>>(path: P) {
         let path = path.as_ref();
         let filename = format!("prep-{}", path.file_name().unwrap().to_string_lossy());
-        let mut dest_path = path.parent().unwrap().to_path_buf().join(filename);
+        let mut dest_path = path.parent().unwrap();
+        while dest_path.file_name().unwrap() != "fixtures" {
+            dest_path = dest_path.parent().unwrap();
+        }
+
+        let mut dest_path = dest_path.to_path_buf().join(filename);
         dest_path.set_extension("png");
         let dest_path = CString::new(dest_path.to_str().unwrap()).unwrap();
 
@@ -172,14 +185,8 @@ mod tests {
 
     #[test]
     fn test_preprocess() {
-        preprocess_and_save("tests/fixtures/immagine.jpg");
-        preprocess_and_save("tests/fixtures/immagine(1).jpg");
-        preprocess_and_save("tests/fixtures/immagine(2).jpg");
-        preprocess_and_save("tests/fixtures/immagine(3).jpg");
-        preprocess_and_save("tests/fixtures/immagine(4).jpg");
-        preprocess_and_save("tests/fixtures/immagine(5).jpg");
-        preprocess_and_save("tests/fixtures/immagine(6).jpg");
-        preprocess_and_save("tests/fixtures/immagine(7).jpg");
-        preprocess_and_save("tests/fixtures/immagine(8).jpg");
+        for test_case in TEST_CASES {
+            preprocess_and_save(test_case);
+        }
     }
 }

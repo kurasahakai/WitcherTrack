@@ -33,7 +33,7 @@ enum ActionType {
 }
 
 fn check_str(a: &str, b: &str) -> bool {
-    normalized_damerau_levenshtein(a, b) > 0.7
+    normalized_damerau_levenshtein(a, b) > 0.6
 }
 
 fn find_action(it: &mut Lines) -> Option<ActionType> {
