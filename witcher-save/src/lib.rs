@@ -130,7 +130,7 @@ fn read_save_entry(data: &[u8], header: &Lz4Header) -> Result<()> {
     let footer: W3Footer = reader.read()?;
     assert_eq!(&footer.magic, b"SE");
 
-    // Read string table.
+    // Read string offsets table.
     let string_tbl_footer_offset = footer.var_tbl_offset as u64 - 10;
     reader.seek(SeekFrom::Start(string_tbl_footer_offset))?;
     let nm_section_offset = reader.read::<i32>()?;
@@ -172,16 +172,139 @@ fn read_save_entry(data: &[u8], header: &Lz4Header) -> Result<()> {
     assert_eq!(reader.read::<i32>()?, 0);
     assert_eq!(&reader.read::<[u8; 4]>()?, b"ENOD");
 
-    // Read variable table.
-    reader.seek(SeekFrom::Start(footer.var_tbl_offset as u64))?;
-    let count = reader.read::<i32>()?;
-    let mut variable_indices = Vec::with_capacity(count as usize);
-    for _ in 0..count {
-        let var_index = reader.read::<VarIndex>()?;
-        variable_indices.push(var_index);
+    // Find CJournalManager
+    for (idx, var_index) in main_variable_indices.iter().enumerate() {
+        read_variable(&mut reader, var_index, &string_table)?;
     }
 
-    println!("{:#?}", &variable_indices[..10]);
+    // Read variable table.
+    // reader.seek(SeekFrom::Start(footer.var_tbl_offset as u64))?;
+    // let count = reader.read::<i32>()?;
+    // let mut variable_indices = Vec::with_capacity(count as usize);
+    // for _ in 0..count {
+    //     let var_index = reader.read::<VarIndex>()?;
+    //     variable_indices.push(var_index);
+    // }
+    //
+    // println!("{:#?}", &variable_indices[..10]);
+    //
+    // for (idx, var_index) in variable_indices.iter().enumerate() {
+    //     read_variable(&mut reader, var_index, &string_table)?;
+    // }
 
     Ok(())
+}
+
+fn read_variable<T: Read + Seek>(
+    reader: &mut Reader<T>,
+    var_index: &VarIndex,
+    string_table: &[String],
+) -> Result<()> {
+    reader.seek(SeekFrom::Start(var_index.offset as u64))?;
+
+    let magic: [u8; 2] = reader.read()?;
+
+    match &magic {
+        b"BS" => {
+            let var = read_bs(reader, var_index, string_table)?;
+            if var.name == "CJournalManager" {
+                println!("{var:?}");
+            }
+            // println!("{var:?}");
+        }
+        b"VL" => {
+            let var = read_vl(reader, var_index, string_table)?;
+            // println!("{var:?}");
+        }
+        b"SX" => {}
+        b"SB" => {}
+        b"RO" => {}
+        b"SS" => {}
+        b"OP" => {}
+        b"BL" => {}
+        b"AV" => {}
+        b"PO" => {}
+        _ => {
+            // println!("Unrecognized magic: {magic:?}");
+        }
+    };
+
+    Ok(())
+}
+
+#[derive(Debug)]
+struct W3Bs {
+    name: String,
+    size: i32,
+    offset: i32,
+}
+
+fn read_bs<T: Read + Seek>(
+    reader: &mut Reader<T>,
+    var_index: &VarIndex,
+    string_table: &[String],
+) -> Result<W3Bs> {
+    let string_index: u16 = reader.read()?;
+    Ok(W3Bs {
+        name: string_table[string_index as usize].clone(),
+        size: 4,
+        offset: var_index.offset,
+    })
+}
+
+#[derive(Debug)]
+struct W3Vl {
+    name: String,
+    ty: String,
+    value: String,
+    size: i32,
+    offset: i32,
+}
+
+fn read_vl<T: Read + Seek>(
+    reader: &mut Reader<T>,
+    var_index: &VarIndex,
+    string_table: &[String],
+) -> Result<W3Vl> {
+    let name_index: u16 = reader.read()?;
+    let type_index: u16 = reader.read()?;
+    let name = string_table[name_index as usize].clone();
+    let ty = string_table[type_index as usize].clone();
+    let value = read_value(reader, &ty)?;
+    Ok(W3Vl {
+        name,
+        ty,
+        value,
+        size: 4,
+        offset: var_index.offset,
+    })
+}
+
+fn read_value<T: Read + Seek>(reader: &mut Reader<T>, type_name: &str) -> Result<String> {
+    let value = if type_name.starts_with("array:") {
+        String::from("Array")
+    } else if type_name.starts_with("handle:") {
+        String::from("Handle")
+    } else if type_name.starts_with("soft:") {
+        String::from("Soft")
+    } else {
+        match type_name {
+            "Uint8" => reader.read::<u8>()?.to_string(),
+            "Uint16" => reader.read::<u16>()?.to_string(),
+            "Int16" => reader.read::<i16>()?.to_string(),
+            "Uint32" => reader.read::<u32>()?.to_string(),
+            "Int32" => reader.read::<i32>()?.to_string(),
+            "Uint64" => reader.read::<i64>()?.to_string(),
+            "LocalizedString" => reader.read::<i32>()?.to_string(),
+            "Float" => reader.read::<f32>()?.to_string(),
+            "Double" => reader.read::<f64>()?.to_string(),
+            "Bool" => (reader.read::<u8>()? == 1).to_string(),
+            _ => {
+                // println!("Unimplemented {type_name}");
+                String::new()
+            }
+        }
+    };
+
+    Ok(value)
 }
