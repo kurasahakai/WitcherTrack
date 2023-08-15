@@ -69,15 +69,20 @@ fn ocr_run() -> Result<()> {
 
 fn main() {
     ansi_term::enable_ansi_support().unwrap();
-    // let ocr_thread = thread::spawn(ocr_run);
+    let ocr_thread = thread::spawn(ocr_run);
     let savefile_thread = thread::spawn(savefile_run);
 
-    let _ = std::io::stdin().read(&mut [0u8]).unwrap();
-
-    // if let Err(e) = ocr_thread.join() {
-    //     eprintln!("OCR thread errored out: {e:?}");
-    // }
-    if let Err(e) = savefile_thread.join() {
-        eprintln!("Savefile thread errored out: {e:?}");
+    match ocr_thread.join() {
+        Err(e) => eprintln!("OCR thread errored out: {e:?}"),
+        Ok(Err(e)) => eprintln!("OCR thread errored out: {e:?}"),
+        _ => {},
     }
+    match savefile_thread.join() {
+        Err(e) => eprintln!("Savefile thread errored out: {e:?}"),
+        Ok(Err(e)) => eprintln!("Savefile thread errored out: {e:?}"),
+        _ => {},
+    }
+
+    println!("Press enter to exit (lol)");
+    let _ = std::io::stdin().read(&mut [0u8]).unwrap();
 }

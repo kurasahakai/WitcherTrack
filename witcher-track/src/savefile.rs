@@ -1,21 +1,24 @@
 use std::collections::HashSet;
-use std::ffi::{c_void, CString};
 use std::path::PathBuf;
-use std::time::Duration;
+use std::process::Command;
+use std::time::{Duration, Instant};
 use std::{env, fs, thread};
 
 use anyhow::Result;
 use lazy_static::lazy_static;
-use libloading::{Library, Symbol};
 use serde::Deserialize;
 
 lazy_static! {
-    pub static ref QUEST_GUIDS: HashSet<String> =
-        include_str!("../../save-helper/data/quest-guids.txt")
-            .trim()
-            .lines()
-            .map(|s| s.to_ascii_uppercase())
-            .collect();
+    pub static ref QUEST_GUIDS: HashSet<String> = include_str!("../data/quest-guids.txt")
+        .trim()
+        .lines()
+        .map(|s| s.to_ascii_uppercase())
+        .collect();
+    pub static ref MAP_PIN_TAGS: HashSet<String> = include_str!("../data/map-pin-tags.txt")
+        .trim()
+        .lines()
+        .map(|s| s.to_ascii_uppercase())
+        .collect();
 }
 
 #[derive(Deserialize, PartialEq, Eq, Hash)]
@@ -29,24 +32,25 @@ struct Quest {
 #[derive(Deserialize)]
 struct TrackerInfo {
     quests: Vec<Quest>,
-    map_pin_tag: Vec<String>,
+    map_pin_tags: Vec<String>,
 }
 
 impl TrackerInfo {
-    fn count_done_quests(&self) -> usize {
+    fn count_completion(self) -> (usize, usize) {
         let done_quests = self
             .quests
-            .iter()
+            .into_iter()
             .filter(|quest| quest.status == "Success")
             .map(|quest| quest.guid.to_ascii_uppercase())
             .filter(|guid| QUEST_GUIDS.contains(guid))
             .collect::<HashSet<_>>();
 
-        done_quests.len()
-    }
+        let done_quests_count = done_quests.len();
 
-    fn count_done_pins(&self) -> usize {
-        0
+        let done_pins = self.map_pin_tags.into_iter().collect::<HashSet<_>>();
+        let done_pins_count = MAP_PIN_TAGS.intersection(&done_pins).count();
+
+        (done_quests_count, done_pins_count)
     }
 }
 
@@ -57,19 +61,13 @@ pub fn savefile_run() -> Result<()> {
     };
 
     let exe_path = std::env::current_exe().unwrap();
-    let lib_path = exe_path.parent().unwrap().join("WitcherSaveTracker.dll");
+    let helper_path = exe_path.parent().unwrap().join("save-helper.exe");
 
     println!("Savefile dir: {savefile_directory:?}");
-    println!("Exe path:     {exe_path:?}");
-    println!("Lib path:     {lib_path:?}");
-
-    let lib = unsafe { Library::new(lib_path)? };
-    println!("Lib loaded");
-    let export_save: Symbol<unsafe extern "C" fn(*const i8) -> ()> =
-        unsafe { lib.get(b"export_save")? };
-    println!("Export loaded");
+    println!("Helper path:  {helper_path:?}");
 
     loop {
+        let start = Instant::now();
         let last_save = fs::read_dir(&savefile_directory)
             .unwrap()
             .flatten()
@@ -85,23 +83,22 @@ pub fn savefile_run() -> Result<()> {
 
         if let Some(last_save) = last_save {
             let save_path = last_save.path();
-            let save_path = PathBuf::from("../witcher-save-cs/data/QuickSave.sav");
-            let save_path_cstr = CString::new(save_path.to_str().unwrap().as_bytes()).unwrap();
-            println!("{:?}", save_path);
-            unsafe { export_save(save_path_cstr.as_ptr()) };
+
+            Command::new(&helper_path).arg(save_path).status().ok();
+
             let save_data: TrackerInfo =
                 serde_json::from_str(&fs::read_to_string("./tw3trackerinfo.json")?)?;
 
-            let done_quests = save_data.count_done_quests();
-            let done_pins = save_data.count_done_pins();
+            let (done_quests, done_pins) = save_data.count_completion();
 
             println!("Done quests: {done_quests}");
             println!("Done pins: {done_pins}");
+
+            fs::write("tw3done_quests.txt", format!("{done_quests}"))?;
+            fs::write("tw3done_pins.txt", format!("{done_pins}"))?;
         }
+        println!("Took {:?}", start.elapsed());
 
         thread::sleep(Duration::from_millis(5000));
-        break;
     }
-
-    Ok(())
 }
