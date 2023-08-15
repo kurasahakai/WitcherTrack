@@ -11,6 +11,7 @@ use tesseract_sys::*;
 pub mod data;
 pub mod db;
 pub mod picture;
+pub mod savefile;
 pub mod screenshot;
 
 // Tesseract trained data.

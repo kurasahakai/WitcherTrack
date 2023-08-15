@@ -7,6 +7,7 @@ use tracing::metadata::LevelFilter;
 use witcher_track::data::{parse_action, Action};
 use witcher_track::db::GameRun;
 use witcher_track::picture::{preprocess, Picture};
+use witcher_track::savefile::savefile_run;
 use witcher_track::screenshot::MovPng;
 use witcher_track::{screenshot, OcrReader};
 
@@ -29,9 +30,8 @@ fn ocr_loop(game_run: &mut GameRun, ocr_reader: &OcrReader, screenshot: Picture)
     Ok(())
 }
 
-// Test loop
-fn run_test() -> Result<()> {
-    ansi_term::enable_ansi_support().unwrap();
+// Test OCR loop
+fn ocr_run_test() -> Result<()> {
     let ocr_reader = OcrReader::new()?;
     let mut game_run = GameRun::new()?;
     let mut movpng = MovPng::new();
@@ -50,9 +50,8 @@ fn run_test() -> Result<()> {
     Ok(())
 }
 
-// Normal loop
-fn run() -> Result<()> {
-    ansi_term::enable_ansi_support().unwrap();
+// Normal OCR loop
+fn ocr_run() -> Result<()> {
     let ocr_reader = OcrReader::new()?;
     let mut game_run = GameRun::new()?;
 
@@ -69,8 +68,16 @@ fn run() -> Result<()> {
 }
 
 fn main() {
-    if let Err(e) = run() {
-        eprintln!("Errored out: {e:#?}");
-        let _ = std::io::stdin().read(&mut [0u8]).unwrap();
+    ansi_term::enable_ansi_support().unwrap();
+    // let ocr_thread = thread::spawn(ocr_run);
+    let savefile_thread = thread::spawn(savefile_run);
+
+    let _ = std::io::stdin().read(&mut [0u8]).unwrap();
+
+    // if let Err(e) = ocr_thread.join() {
+    //     eprintln!("OCR thread errored out: {e:?}");
+    // }
+    if let Err(e) = savefile_thread.join() {
+        eprintln!("Savefile thread errored out: {e:?}");
     }
 }
