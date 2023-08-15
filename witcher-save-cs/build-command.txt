@@ -1,0 +1,1 @@
+dotnet publish /p:witcher_save_cs=Static -r win-x64 -c Release

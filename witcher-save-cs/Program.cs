@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 
 using SaveFile;
@@ -12,9 +13,11 @@ class Quest
 
 public class Program
 {
-    static void Main(string[] Args)
+    [UnmanagedCallersOnly(EntryPoint = "export_save")]
+    public static void ExportSave(IntPtr pPath)
     {
-        var savefile = new Witcher3SaveFile("../witcher-save/QuickSave.sav", Witcher3ReadLevel.Quick);
+        var path = Marshal.PtrToStringAnsi(pPath);
+        var savefile = new Witcher3SaveFile(path, Witcher3ReadLevel.Quick);
         var quests = savefile.CJournalManager.Statuses
           .ConvertAll(status => new Quest { 
               Guid = status.PrimaryGUID, 
