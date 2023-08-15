@@ -1,3 +1,4 @@
+from zipfile import ZipFile
 from subprocess import run
 from shutil import copy2
 from pathlib import Path
@@ -19,3 +20,7 @@ if __name__ == '__main__':
         DLL_PATH,
         RUST_TARGET_PATH / "save-helper.exe"
     )
+
+    with ZipFile('witcher-track.zip', mode='w') as zip:
+        zip.write('witcher-track/target/release/witcher-track.exe', 'witcher-track.exe')
+        zip.write('witcher-track/target/release/save-helper.exe', 'save-helper.exe')
