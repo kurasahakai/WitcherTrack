@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--<OutputType>Library</OutputType>-->
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net7.0</TargetFramework>
+    <RootNamespace>witcher_save_cs</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <PublishAot>true</PublishAot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LZ4PCL" Version="1.0.0">
+      <NoWarn>NU1701</NoWarn>
+    </PackageReference>
+        <!--<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />-->
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\W3SavegameEditor.Core\W3SavegameEditor.Core.csproj"></ProjectReference>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <Version>0.2.0</Version>
+    <Authors>Atvaark</Authors>
+    <Copyright>Copyright ©  2015 Atvaark</Copyright>
+    <PackageLicenseUrl>https://github.com/Atvaark/W3SavegameEditor/blob/master/LICENSE</PackageLicenseUrl>
+    <RepositoryUrl>https://github.com/Atvaark/W3SavegameEditor</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="K4os.Compression.LZ4" Version="1.1.1" />
+    <PackageReference Include="System.Buffers" Version="4.5.0" />
+  </ItemGroup>
+
+</Project>
