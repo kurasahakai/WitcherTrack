@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
-using Newtonsoft.Json;
 
 using SaveFile;
 
@@ -23,7 +22,13 @@ public class Program
               Guid = status.PrimaryGUID, 
               Status = status.Status.ToString() 
           });
-        string jsonData = JsonConvert.SerializeObject(quests, Formatting.Indented);
-        File.WriteAllText("save.json", jsonData);
+
+        // string jsonData = JsonConvert.SerializeObject(quests, Formatting.Indented);
+
+        string data = "";
+        foreach (var quest in quests) {
+          data += quest.Guid + ";;" + quest.Status + "\n";
+        }
+        File.WriteAllText("tw3savefile.csv", data);
     }
 }

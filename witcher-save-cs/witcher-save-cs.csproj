@@ -14,7 +14,7 @@
     <PackageReference Include="LZ4PCL" Version="1.0.0">
       <NoWarn>NU1701</NoWarn>
     </PackageReference>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+        <!--<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />-->
   </ItemGroup>
 
 </Project>

@@ -13,6 +13,6 @@ function.argtypes = [c_char_p]
 function.restype = None
 
 # Call the function
-file_path = b"../witcher-save/QuickSave.sav"  # Replace with the path you want to pass to the function
+file_path = b"./QuickSave.sav"  # Replace with the path you want to pass to the function
 function(file_path)
 
